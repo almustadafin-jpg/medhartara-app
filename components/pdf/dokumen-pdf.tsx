@@ -1,0 +1,409 @@
+import {
+  Document, Page, Text, View, StyleSheet, Image,
+} from "@react-pdf/renderer";
+import { formatIDR, formatTanggal } from "@/lib/format";
+import { terbilangRupiah } from "@/lib/terbilang";
+
+/**
+ * Template PDF bersama untuk Penawaran & Invoice.
+ *
+ * Memakai @react-pdf/renderer, bukan Chromium headless: tidak perlu
+ * mengemas peramban 50 MB ke serverless, dan hasilnya deterministik.
+ * Font bawaan Helvetica sudah memuat seluruh karakter Latin yang
+ * dibutuhkan bahasa Indonesia.
+ */
+
+const warna = {
+  teks: "#0f172a",
+  redup: "#64748b",
+  garis: "#e2e8f0",
+  latar: "#f8fafc",
+  merah: "#dc2626",
+  hijau: "#047857",
+};
+
+const s = StyleSheet.create({
+  halaman: {
+    paddingTop: 34, paddingBottom: 48, paddingHorizontal: 40,
+    fontSize: 9, color: warna.teks, fontFamily: "Helvetica",
+  },
+  kepala: {
+    flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start",
+    marginBottom: 14, paddingBottom: 12,
+    borderBottomWidth: 1, borderBottomColor: warna.garis,
+  },
+  kolomPT: { maxWidth: 300 },
+  namaPT: { fontSize: 13, fontFamily: "Helvetica-Bold", marginBottom: 5 },
+  redup: { color: warna.redup, lineHeight: 1.5 },
+
+  /**
+   * Logo Medhartara: 571 x 480 px → rasio 1,19 : 1.
+   * 76 x 64 pt mempertahankan rasio itu (76/64 = 1,1875).
+   *
+   * Kedua dimensi WAJIB ditulis. Bila hanya tinggi yang diisi, gambar
+   * ikut aturan flexbox dan melar selebar kolom (300pt) — logo jadi
+   * tertarik mendatar. `alignSelf` mencegahnya meregang.
+   */
+  logo: {
+    width: 76,
+    height: 64,
+    objectFit: "contain",
+    alignSelf: "flex-start",
+    marginBottom: 10,
+  },
+
+  barisAlamat: { color: warna.redup, fontSize: 8.5, lineHeight: 1.45 },
+  barisKontak: { color: warna.redup, fontSize: 8.5, lineHeight: 1.45, marginTop: 2 },
+
+  jenisDok: { fontSize: 8, color: warna.redup, letterSpacing: 1.2, textAlign: "right" },
+  nomor: { fontSize: 15, fontFamily: "Helvetica-Bold", textAlign: "right", marginTop: 3 },
+  status: {
+    marginTop: 7, alignSelf: "flex-end", paddingVertical: 3, paddingHorizontal: 8,
+    borderRadius: 10, backgroundColor: warna.latar, fontSize: 8, color: warna.redup,
+  },
+
+  pihak: { flexDirection: "row", justifyContent: "space-between", marginBottom: 14 },
+  labelKecil: { fontSize: 7, color: warna.redup, letterSpacing: 0.8, marginBottom: 3 },
+
+  thead: {
+    flexDirection: "row", backgroundColor: warna.latar,
+    borderBottomWidth: 1, borderBottomColor: warna.garis,
+    paddingVertical: 6, paddingHorizontal: 6,
+  },
+  tr: {
+    flexDirection: "row", borderBottomWidth: 1, borderBottomColor: warna.garis,
+    paddingVertical: 5, paddingHorizontal: 6,
+  },
+  th: { fontFamily: "Helvetica-Bold", fontSize: 8, color: warna.redup },
+  cDeskripsi: { flex: 4 },
+  cQty: { flex: 1, textAlign: "right" },
+  cSatuan: { flex: 1, textAlign: "center", color: warna.redup },
+  cHarga: { flex: 2, textAlign: "right" },
+  cSubtotal: { flex: 2, textAlign: "right" },
+
+  barisPenutupTabel: {
+    flexDirection: "row", justifyContent: "space-between",
+    alignItems: "flex-start", marginTop: 10,
+  },
+  ringkas: { width: 220 },
+  barisRingkas: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 2.5 },
+  barisTotal: {
+    flexDirection: "row", justifyContent: "space-between", paddingTop: 6, marginTop: 4,
+    borderTopWidth: 1, borderTopColor: warna.garis,
+    fontSize: 11, fontFamily: "Helvetica-Bold",
+  },
+
+  terbilang: {
+    flex: 1, maxWidth: 260, marginRight: 24,
+    paddingVertical: 6, paddingHorizontal: 10,
+    backgroundColor: warna.latar, borderRadius: 4,
+  },
+  terbilangIsi: {
+    fontFamily: "Helvetica-Oblique", fontSize: 9, lineHeight: 1.4, color: warna.teks,
+  },
+
+  barisPenutup: {
+    flexDirection: "row", justifyContent: "space-between",
+    alignItems: "flex-start", marginTop: 12,
+  },
+  kolomBayar: { flex: 1, maxWidth: 300, marginRight: 24 },
+  barisBank: { color: warna.teks, fontSize: 9, lineHeight: 1.15 },
+
+  // Diberi jarak atas agar "Hormat kami" tidak menempel pada
+  // blok ringkasan total yang berakhir tepat di atasnya.
+  kolomTtd: { width: 190, alignItems: "center", marginTop: 38 },
+  ttdSalam: { fontSize: 9, color: warna.teks, marginBottom: 62 },
+  ttdNama: {
+    width: 160,
+    fontSize: 9.5, fontFamily: "Helvetica-Bold",
+    borderTopWidth: 1, borderTopColor: warna.teks,
+    paddingTop: 4, textAlign: "center",
+  },
+  ttdJabatan: {
+    width: 160,
+    fontSize: 8.5, color: warna.redup, marginTop: 2, textAlign: "center",
+  },
+
+  bagian: { marginTop: 10 },
+  judulBagian: { fontSize: 9, fontFamily: "Helvetica-Bold", marginBottom: 3 },
+  kotakCatatan: {
+    marginTop: 8, padding: 8, backgroundColor: warna.latar, borderRadius: 4, lineHeight: 1.4,
+  },
+
+  kaki: {
+    position: "absolute", bottom: 24, left: 40, right: 40,
+    borderTopWidth: 1, borderTopColor: warna.garis, paddingTop: 8,
+    flexDirection: "row", justifyContent: "space-between",
+    fontSize: 7, color: warna.redup,
+  },
+});
+
+export interface BarisItemPDF {
+  deskripsi: string;
+  kuantitas: number;
+  satuan: string | null;
+  harga_satuan: number;
+  subtotal: number;
+}
+
+export interface PembayaranPDF {
+  termin_ke: number | null;
+  tanggal: string;
+  metode: string;
+  jumlah: number;
+}
+
+export interface DataDokumenPDF {
+  jenis: "penawaran" | "invoice";
+  nomor: string;
+  statusLabel: string;
+  tanggal: string;
+  tanggalKeduaLabel: string;
+  tanggalKedua: string | null;
+
+  perusahaan: {
+    nama: string; alamat: string | null; telepon: string | null;
+    email: string | null; npwp: string | null; logo_url: string | null;
+    bank_nama: string | null; bank_rekening: string | null; bank_atas_nama: string | null;
+  };
+  pelanggan: {
+    nama: string; narahubung: string | null; alamat: string | null; npwp: string | null;
+  };
+  proyek: string | null;
+  lokasi?: string | null;
+  jadwal?: string | null;
+
+  items: BarisItemPDF[];
+  subtotal: number;
+  diskon_persen: number;
+  pajak_persen: number;
+  total: number;
+
+  dibayar?: number;
+  sisa?: number;
+  pembayaran?: PembayaranPDF[];
+
+  catatan: string | null;
+  ditandatangani?: { oleh: string; pada: string } | null;
+  penandaTangan?: { nama: string | null; jabatan: string | null } | null;
+}
+
+export function DokumenPDF({ data }: { data: DataDokumenPDF }) {
+  const potongan = (data.subtotal * data.diskon_persen) / 100;
+  const dasar = data.subtotal - potongan;
+  const ppn = (dasar * data.pajak_persen) / 100;
+  const adalahInvoice = data.jenis === "invoice";
+  const adaLogo = Boolean(data.perusahaan.logo_url);
+
+  // Telepon dan email digabung hanya bila keduanya ada, sehingga tidak
+  // pernah muncul pemisah menggantung seperti " · email@..."
+  const kontak = [data.perusahaan.telepon, data.perusahaan.email]
+    .filter(Boolean)
+    .join("  ·  ");
+
+  return (
+    <Document
+      title={`${adalahInvoice ? "Invoice" : "Penawaran"} ${data.nomor}`}
+      author={data.perusahaan.nama}
+    >
+      <Page size="A4" style={s.halaman}>
+        <View style={s.kepala}>
+          <View style={s.kolomPT}>
+            {adaLogo && <Image src={data.perusahaan.logo_url!} style={s.logo} />}
+
+            {/* Nama hanya dicetak sebagai teks bila TIDAK ada logo —
+                logo Medhartara sudah memuat wordmark, mencetaknya dua
+                kali membuat kop terlihat amatir. */}
+            {!adaLogo && <Text style={s.namaPT}>{data.perusahaan.nama}</Text>}
+
+            {data.perusahaan.alamat && (
+              <Text style={s.barisAlamat}>{data.perusahaan.alamat}</Text>
+            )}
+            {kontak && <Text style={s.barisKontak}>{kontak}</Text>}
+            {data.perusahaan.npwp && (
+              <Text style={s.barisKontak}>NPWP {data.perusahaan.npwp}</Text>
+            )}
+          </View>
+
+          <View>
+            <Text style={s.jenisDok}>
+              {adalahInvoice ? "INVOICE" : "PENAWARAN HARGA"}
+            </Text>
+            <Text style={s.nomor}>{data.nomor}</Text>
+            <Text style={s.status}>{data.statusLabel}</Text>
+          </View>
+        </View>
+
+        <View style={s.pihak}>
+          <View style={{ maxWidth: 260 }}>
+            <Text style={s.labelKecil}>
+              {adalahInvoice ? "DITAGIHKAN KEPADA" : "KEPADA"}
+            </Text>
+            <Text style={{ fontFamily: "Helvetica-Bold" }}>{data.pelanggan.nama}</Text>
+            {data.pelanggan.narahubung && (
+              <Text style={s.barisKontak}>{data.pelanggan.narahubung}</Text>
+            )}
+            {data.pelanggan.alamat && (
+              <Text style={s.barisKontak}>{data.pelanggan.alamat}</Text>
+            )}
+            {data.pelanggan.npwp && (
+              <Text style={s.barisKontak}>NPWP {data.pelanggan.npwp}</Text>
+            )}
+          </View>
+
+          <View style={{ textAlign: "right" }}>
+            <Text style={s.redup}>Tanggal: {formatTanggal(data.tanggal)}</Text>
+            <Text style={s.redup}>
+              {data.tanggalKeduaLabel}: {formatTanggal(data.tanggalKedua)}
+            </Text>
+            {data.proyek && <Text style={s.redup}>Proyek: {data.proyek}</Text>}
+          </View>
+        </View>
+
+        <View style={s.thead}>
+          <Text style={[s.th, s.cDeskripsi]}>DESKRIPSI</Text>
+          <Text style={[s.th, s.cQty]}>QTY</Text>
+          <Text style={[s.th, s.cSatuan]}>SATUAN</Text>
+          <Text style={[s.th, s.cHarga]}>HARGA</Text>
+          <Text style={[s.th, s.cSubtotal]}>SUBTOTAL</Text>
+        </View>
+
+        {data.items.map((it, i) => (
+          <View key={i} style={s.tr} wrap={false}>
+            <Text style={s.cDeskripsi}>{it.deskripsi}</Text>
+            <Text style={s.cQty}>{Number(it.kuantitas)}</Text>
+            <Text style={s.cSatuan}>{it.satuan ?? "—"}</Text>
+            <Text style={s.cHarga}>{formatIDR(it.harga_satuan)}</Text>
+            <Text style={s.cSubtotal}>{formatIDR(it.subtotal)}</Text>
+          </View>
+        ))}
+
+        <View style={s.barisPenutupTabel}>
+          {/* Terbilang mengacu pada nilai total dokumen, bukan sisa tagihan —
+              itu yang lazim dijadikan rujukan pada dokumen resmi.
+              Ditempatkan di sebelah kiri ringkasan agar mengisi ruang yang
+              selama ini kosong, bukan menambah tinggi halaman. */}
+          <View style={s.terbilang} wrap={false}>
+            <Text style={s.labelKecil}>TERBILANG</Text>
+            <Text style={s.terbilangIsi}>{terbilangRupiah(data.total)}</Text>
+          </View>
+
+          <View style={s.ringkas}>
+          <View style={s.barisRingkas}>
+            <Text style={s.redup}>Subtotal</Text>
+            <Text>{formatIDR(data.subtotal)}</Text>
+          </View>
+
+          {data.diskon_persen > 0 && (
+            <View style={s.barisRingkas}>
+              <Text style={s.redup}>Diskon {data.diskon_persen}%</Text>
+              <Text style={{ color: warna.merah }}>-{formatIDR(potongan)}</Text>
+            </View>
+          )}
+
+          {data.pajak_persen > 0 && (
+            <View style={s.barisRingkas}>
+              <Text style={s.redup}>PPN {data.pajak_persen}%</Text>
+              <Text>{formatIDR(ppn)}</Text>
+            </View>
+          )}
+
+          <View style={s.barisTotal}>
+            <Text>Total</Text>
+            <Text>{formatIDR(data.total)}</Text>
+          </View>
+
+          {adalahInvoice && (
+            <>
+              <View style={s.barisRingkas}>
+                <Text style={s.redup}>Sudah dibayar</Text>
+                <Text style={{ color: warna.hijau }}>{formatIDR(data.dibayar ?? 0)}</Text>
+              </View>
+              <View style={[s.barisRingkas, { fontFamily: "Helvetica-Bold" }]}>
+                <Text>Sisa tagihan</Text>
+                <Text>{formatIDR(data.sisa ?? 0)}</Text>
+              </View>
+            </>
+          )}
+          </View>
+        </View>
+
+        {adalahInvoice && (data.pembayaran?.length ?? 0) > 0 && (
+          <View style={s.bagian}>
+            <Text style={s.judulBagian}>Riwayat Pembayaran</Text>
+            {data.pembayaran!.map((p, i) => (
+              <View key={i} style={s.tr} wrap={false}>
+                <Text style={{ flex: 2 }}>Termin {p.termin_ke ?? "—"}</Text>
+                <Text style={{ flex: 3, color: warna.redup }}>{formatTanggal(p.tanggal)}</Text>
+                <Text style={{ flex: 2, color: warna.redup }}>{p.metode}</Text>
+                <Text style={{ flex: 3, textAlign: "right", color: warna.hijau }}>
+                  {formatIDR(p.jumlah)}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Pembayaran di kiri, tanda tangan di kanan — keduanya dalam satu
+            baris agar teks rekening tidak melebar sampai tepi kanan. */}
+        <View style={s.barisPenutup} wrap={false}>
+          <View style={s.kolomBayar}>
+            {data.catatan && (
+              <View style={s.kotakCatatan}>
+                <Text style={s.labelKecil}>CATATAN</Text>
+                <Text>{data.catatan}</Text>
+              </View>
+            )}
+
+            {/* Instruksi transfer hanya relevan pada invoice.
+                Penawaran belum menagih apa pun. */}
+            {adalahInvoice && data.perusahaan.bank_nama && (
+              <>
+                <Text style={[s.judulBagian, { marginTop: data.catatan ? 10 : 0 }]}>
+                  Pembayaran
+                </Text>
+                <Text style={s.barisBank}>{data.perusahaan.bank_nama}</Text>
+                {data.perusahaan.bank_rekening && (
+                  <Text style={s.barisBank}>
+                    Nomor Rekening {data.perusahaan.bank_rekening}
+                  </Text>
+                )}
+                {data.perusahaan.bank_atas_nama && (
+                  <Text style={s.barisBank}>
+                    atas nama {data.perusahaan.bank_atas_nama}
+                  </Text>
+                )}
+              </>
+            )}
+
+            {data.ditandatangani && (
+              <Text style={[s.redup, { marginTop: adalahInvoice ? 10 : 0 }]}>
+                Disetujui oleh {data.ditandatangani.oleh} pada{" "}
+                {formatTanggal(data.ditandatangani.pada)}
+              </Text>
+            )}
+          </View>
+
+          {data.penandaTangan?.nama && (
+            <View style={s.kolomTtd}>
+              <Text style={s.ttdSalam}>Hormat kami,</Text>
+              <Text style={s.ttdNama}>{data.penandaTangan.nama}</Text>
+              {data.penandaTangan.jabatan && (
+                <Text style={s.ttdJabatan}>{data.penandaTangan.jabatan}</Text>
+              )}
+            </View>
+          )}
+        </View>
+
+        <View style={s.kaki} fixed>
+          <Text>
+            {data.perusahaan.nama} · {data.nomor}
+          </Text>
+          <Text
+            render={({ pageNumber, totalPages }) => `Halaman ${pageNumber} dari ${totalPages}`}
+          />
+        </View>
+      </Page>
+    </Document>
+  );
+}
