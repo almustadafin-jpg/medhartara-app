@@ -11,10 +11,17 @@
 --   users_profile  — akun dan perannya
 --   auth.users     — kredensial login
 --
--- Skrip ini mematikan sementara `trg_transactions_jaga`. Trigger itu
--- menolak penghapusan transaksi yang lahir dari pembayaran invoice —
--- benar untuk pemakaian harian, tapi menghalangi pembersihan total.
--- Bagian 4 menyalakannya kembali; jangan berhenti di tengah jalan.
+-- Skrip ini mematikan sementara SELURUH trigger pengguna pada tabel
+-- yang dibersihkan. Mematikan satu trigger saja tidak cukup, dan itu
+-- terbukti saat dijalankan pertama kali: menghapus `payments` memicu
+-- perhitungan ulang status invoice `lunas → terkirim`, yang ditolak
+-- state machine invoice. Aturan-aturan itu benar untuk pemakaian
+-- harian; hanya pembersihan total yang perlu melewatinya.
+--
+-- Bagian 1 menyalakan semuanya kembali. Bila skrip gagal di tengah,
+-- seluruhnya di-rollback termasuk perintah mematikan trigger —
+-- Supabase menjalankan satu eksekusi sebagai satu transaksi.
+-- Bagian 5 tetap memverifikasi ini secara eksplisit.
 -- =========================================================
 
 
@@ -37,9 +44,16 @@
 -- ---------------------------------------------------------
 -- 1. TRANSAKSI & DOKUMEN  (selalu dijalankan)
 -- ---------------------------------------------------------
-begin;
-
-alter table transactions disable trigger trg_transactions_jaga;
+alter table transactions    disable trigger user;
+alter table payments        disable trigger user;
+alter table kuitansi        disable trigger user;
+alter table invoices        disable trigger user;
+alter table invoice_items   disable trigger user;
+alter table quotations      disable trigger user;
+alter table quotation_items disable trigger user;
+alter table boq             disable trigger user;
+alter table boq_items       disable trigger user;
+alter table projects        disable trigger user;
 
 -- Bukti dilepas lebih dulu: `attachments` polimorfik, tidak ada foreign
 -- key yang menariknya ikut terhapus.
@@ -60,21 +74,22 @@ delete from quotations;
 delete from boq_items;
 delete from boq;
 
-alter table transactions enable trigger trg_transactions_jaga;
+-- MASTER DATA — beri komentar pada tiga baris ini bila pelanggan,
+-- vendor, dan proyek yang ada sudah data sungguhan.
+delete from projects;
+delete from customers;
+delete from vendors;
 
-commit;
-
-
--- ---------------------------------------------------------
--- 2. MASTER DATA  (opsional — buang komentarnya bila perlu)
---    Lewati bagian ini kalau pelanggan/vendor/proyek yang ada
---    sudah data sungguhan dan hanya transaksinya yang uji coba.
--- ---------------------------------------------------------
--- begin;
--- delete from projects;
--- delete from customers;
--- delete from vendors;
--- commit;
+alter table transactions    enable trigger user;
+alter table payments        enable trigger user;
+alter table kuitansi        enable trigger user;
+alter table invoices        enable trigger user;
+alter table invoice_items   enable trigger user;
+alter table quotations      enable trigger user;
+alter table quotation_items enable trigger user;
+alter table boq             enable trigger user;
+alter table boq_items       enable trigger user;
+alter table projects        enable trigger user;
 
 
 -- ---------------------------------------------------------
@@ -112,10 +127,10 @@ union all select 'bukti',       count(*) from attachments
 union all select 'penomoran',   count(*) from document_sequences
 union all select 'audit',       count(*) from audit_logs;
 
--- Trigger penjaga wajib hidup lagi — harus mengembalikan 'O' (origin).
--- Bila hasilnya 'D', jalankan:
---   alter table transactions enable trigger trg_transactions_jaga;
-select tgname, tgenabled
+-- Semua trigger wajib hidup lagi — hasil di bawah HARUS 0 baris.
+-- Bila ada yang muncul, nyalakan lagi:
+--   alter table <nama_tabel> enable trigger user;
+select tgrelid::regclass as tabel, tgname
   from pg_trigger
- where tgrelid = 'transactions'::regclass
-   and not tgisinternal;
+ where not tgisinternal
+   and tgenabled = 'D';
