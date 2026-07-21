@@ -82,8 +82,25 @@ export async function hapusTransaksi(id: string) {
   }
 
   const supabase = await createClient();
+
+  // Bukti dilepas lebih dulu. `attachments` polimorfik — tidak ada foreign
+  // key yang menahannya, jadi tanpa langkah ini barisnya (dan berkasnya di
+  // Storage) tertinggal sebagai sampah yang tidak bisa dijangkau lagi.
+  const { data: bukti } = await supabase
+    .from("attachments")
+    .select("id, file_url")
+    .eq("entity_type", "transaction")
+    .eq("entity_id", id);
+
   const { error } = await supabase.from("transactions").delete().eq("id", id);
   if (error) return { error: pesanDB(error.message) };
+
+  // Baru dibersihkan setelah transaksinya benar-benar terhapus; kalau
+  // penghapusan ditolak trigger, buktinya harus tetap utuh.
+  if (bukti?.length) {
+    await supabase.from("attachments").delete().eq("entity_type", "transaction").eq("entity_id", id);
+    await supabase.storage.from("bukti").remove(bukti.map((b) => b.file_url));
+  }
 
   revalidatePath("/keuangan/pemasukan");
   revalidatePath("/keuangan/pengeluaran");

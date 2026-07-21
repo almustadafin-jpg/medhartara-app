@@ -45,6 +45,7 @@ export default async function PengeluaranPage() {
         companyId={profil.company_id ?? ""}
         peran={profil.role}
         bisaCatat={boleh(profil.role, "catatPengeluaran")}
+        bisaHapus={boleh(profil.role, "kelolaKeuangan")}
       />
     </div>
   );

@@ -1,7 +1,7 @@
 # Menaikkan Aplikasi ke Server
 
 Target: aplikasi berjalan di subdomain Anda sendiri, misalnya
-`app.medhartara.id`, dengan kode di GitHub dan hosting di Vercel.
+`project.medhartara.com`, dengan kode di GitHub dan hosting di Vercel.
 
 ---
 
@@ -71,16 +71,24 @@ Setelah selesai aplikasi hidup di alamat seperti
 ## 3. Pasang subdomain Niagahoster
 
 **Di Vercel:** Project → Settings → Domains → tambahkan
-`app.medhartara.id`. Vercel akan menampilkan data DNS yang diminta.
+`project.medhartara.com`. Vercel akan menampilkan data DNS yang diminta.
 
 **Di Niagahoster:** panel → Domain → DNS Management → tambah record:
 
 | Type | Name | Value | TTL |
 |---|---|---|---|
-| CNAME | `app` | `cname.vercel-dns.com` | 3600 |
+| CNAME | `project` | `e919d972733c7a8c.vercel-dns-017.com.` | 3600 |
 
-Ganti `app` sesuai subdomain yang Anda inginkan. Perubahan DNS biasanya
-aktif dalam 5–30 menit, kadang sampai beberapa jam.
+Nilai target dibaca dari Vercel → Settings → Domains → *View DNS
+configuration*; nilainya khas per proyek, jangan disalin dari proyek lain.
+
+**Bila subdomain sudah punya record lain** — Hostinger membuat ALIAS
+`project → project.medhartara.com.cdn.hstgr.net` secara otomatis saat
+subdomain dibuat — hapus dulu. Satu nama tidak boleh punya CNAME dan
+ALIAS/A bersamaan.
+
+Sudah dikerjakan pada 21 Juli 2026; status Vercel *Valid Configuration*
+dan sertifikat HTTPS terbit dalam hitungan menit.
 
 Sertifikat HTTPS diterbitkan Vercel otomatis begitu DNS terbaca — tidak
 perlu membeli SSL.
@@ -91,8 +99,8 @@ perlu membeli SSL.
 
 Supabase → **Authentication → URL Configuration**:
 
-- **Site URL**: `https://app.medhartara.id`
-- **Redirect URLs**: tambahkan `https://app.medhartara.id/**`
+- **Site URL**: `https://project.medhartara.com`
+- **Redirect URLs**: tambahkan `https://project.medhartara.com/**`
 
 Belum berpengaruh sekarang karena login memakai email dan kata sandi,
 tapi wajib bila kelak dipasang fitur reset kata sandi.

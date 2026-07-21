@@ -6,8 +6,10 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabel, Thead, Th, Td, Tr, KondisiKosong } from "@/components/ui/table";
+import { TombolHapus } from "@/components/ui/tombol-hapus";
 import { formatIDR, formatTanggalPendek } from "@/lib/format";
 import { LABEL_METODE } from "@/lib/status";
+import { hapusTransaksi } from "./actions";
 import TransaksiForm from "./transaksi-form";
 import BuktiTransaksi from "./bukti-transaksi";
 import type {
@@ -25,6 +27,7 @@ export default function TransaksiClient({
   companyId,
   peran,
   bisaCatat,
+  bisaHapus = false,
 }: {
   tipe: TxnType;
   data: Transaction[];
@@ -34,6 +37,8 @@ export default function TransaksiClient({
   companyId: string;
   peran: UserRole;
   bisaCatat: boolean;
+  /** Hanya Admin/Finance. PM boleh mencatat pengeluaran, tapi tidak menghapusnya. */
+  bisaHapus?: boolean;
 }) {
   const [modalForm, setModalForm] = useState(false);
   const [modalBukti, setModalBukti] = useState<Transaction | undefined>();
@@ -112,7 +117,7 @@ export default function TransaksiClient({
             <Th>{tipe === "pengeluaran" ? "Proyek / Vendor" : "Proyek"}</Th>
             <Th>Metode</Th>
             <Th className="text-right">Jumlah</Th>
-            <Th className="w-24">Bukti</Th>
+            <Th className="w-32">Bukti</Th>
           </Tr>
         </Thead>
         <tbody>
@@ -180,6 +185,16 @@ export default function TransaksiClient({
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </button>
+                      )}
+                      {/* Transaksi otomatis dari pembayaran invoice ditolak
+                          trigger database; tombolnya disembunyikan agar
+                          penolakan itu tidak jadi kejutan. */}
+                      {bisaHapus && !otomatis && (
+                        <TombolHapus
+                          jenis="Transaksi"
+                          nama={t.deskripsi ?? formatIDR(t.jumlah)}
+                          onHapus={() => hapusTransaksi(t.id)}
+                        />
                       )}
                     </div>
                   </Td>

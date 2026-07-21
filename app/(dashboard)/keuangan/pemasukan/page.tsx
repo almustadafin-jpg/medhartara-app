@@ -38,6 +38,7 @@ export default async function PemasukanPage() {
         companyId={profil.company_id ?? ""}
         peran={profil.role}
         bisaCatat={boleh(profil.role, "kelolaKeuangan")}
+        bisaHapus={boleh(profil.role, "kelolaKeuangan")}
       />
     </div>
   );
