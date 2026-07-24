@@ -6,7 +6,7 @@ import { simpanTransaksi, type FormState } from "./actions";
 import { Field, Input, Textarea, Select } from "@/components/ui/field";
 import { Button, TombolSimpan } from "@/components/ui/button";
 import { LABEL_METODE } from "@/lib/status";
-import { KATEGORI_PENGELUARAN, KATEGORI_PEMASUKAN } from "@/lib/constants";
+import { KATEGORI_PENGELUARAN_GRUP, KATEGORI_PEMASUKAN } from "@/lib/constants";
 import { formatIDR } from "@/lib/format";
 import type { Transaction, Project, Vendor, TxnType, UserRole } from "@/types";
 
@@ -37,7 +37,6 @@ export default function TransaksiForm({
   }, [state.sukses, onSelesai, router]);
 
   const e = state.fieldErrors ?? {};
-  const kategori = tipe === "pengeluaran" ? KATEGORI_PENGELUARAN : KATEGORI_PEMASUKAN;
   const angka = Number(jumlah.replace(/[^\d]/g, "")) || 0;
 
   return (
@@ -97,11 +96,30 @@ export default function TransaksiForm({
           error={!!e.kategori}
         >
           <option value="">— Pilih kategori —</option>
-          {kategori.map((k) => (
-            <option key={k} value={k}>
-              {k}
-            </option>
-          ))}
+          {tipe === "pengeluaran"
+            ? KATEGORI_PENGELUARAN_GRUP.map((g) => (
+                <optgroup key={g.grup} label={g.grup}>
+                  {g.item.map((k) => (
+                    <option key={k} value={k}>
+                      {k}
+                    </option>
+                  ))}
+                </optgroup>
+              ))
+            : KATEGORI_PEMASUKAN.map((k) => (
+                <option key={k} value={k}>
+                  {k}
+                </option>
+              ))}
+          {/* Kategori lama pada data yang sedang diedit tetap terpilih walau
+              tak lagi ada di daftar, supaya nilainya tidak hilang saat disimpan. */}
+          {transaksi?.kategori &&
+            !KATEGORI_PENGELUARAN_GRUP.some((g) =>
+              (g.item as readonly string[]).includes(transaksi.kategori as string),
+            ) &&
+            !(KATEGORI_PEMASUKAN as readonly string[]).includes(transaksi.kategori) && (
+              <option value={transaksi.kategori}>{transaksi.kategori}</option>
+            )}
         </Select>
       </Field>
 
