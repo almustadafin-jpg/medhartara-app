@@ -116,16 +116,86 @@ export async function ubahPengguna(
 }
 
 /** Reset kata sandi pengguna oleh Admin/Finance. */
-export async function resetKataSandi(id: string, passwordBaru: string) {
+export async function resetKataSandi(
+  id: string,
+  passwordBaru: string,
+): Promise<{ error?: string; sukses?: boolean }> {
   const profil = await wajibLogin()
-  if (!boleh(profil.role, 'kelolaPengguna')) throw new Error('Tanpa izin')
-  if (passwordBaru.length < 8) throw new Error('Kata sandi minimal 8 karakter')
+  if (!boleh(profil.role, 'kelolaPengguna')) {
+    return { error: 'Hanya Admin/Finance yang dapat mengatur ulang kata sandi.' }
+  }
+  if (passwordBaru.length < 8) {
+    return { error: 'Kata sandi minimal 8 karakter.' }
+  }
+  if (!/[A-Za-z]/.test(passwordBaru) || !/[0-9]/.test(passwordBaru)) {
+    return { error: 'Kata sandi harus memuat huruf dan angka.' }
+  }
 
   const admin = createAdminClient()
   const { error } = await admin.auth.admin.updateUserById(id, {
     password: passwordBaru,
   })
-  if (error) throw new Error('Gagal mengatur ulang kata sandi')
+  if (error) return { error: 'Gagal mengatur ulang kata sandi.' }
 
   revalidatePath('/pengaturan/pengguna')
+  return { sukses: true }
+}
+
+/**
+ * Menghapus pengguna.
+ *
+ * Menghapus akun auth; baris users_profile ikut terhapus lewat cascade.
+ * Bila pengguna itu pernah membuat, menyetujui, atau tercatat di dokumen
+ * mana pun, foreign key pada users_profile menolak — dan itu benar:
+ * jejak siapa-melakukan-apa tidak boleh hilang. Dalam hal itu, arahkan
+ * ke penonaktifan, bukan pemaksaan hapus.
+ */
+export async function hapusPengguna(
+  id: string,
+): Promise<{ error?: string; sukses?: boolean }> {
+  const profil = await wajibLogin()
+  if (!boleh(profil.role, 'kelolaPengguna')) {
+    return { error: 'Hanya Admin/Finance yang dapat menghapus pengguna.' }
+  }
+  if (id === profil.id) {
+    return { error: 'Anda tidak dapat menghapus akun sendiri.' }
+  }
+
+  const supabase = await createClient()
+
+  // Cegah menghapus Admin/Finance terakhir yang masih aktif —
+  // tanpa itu tidak ada lagi yang bisa mengelola pengguna.
+  const { data: sasaran } = await supabase
+    .from('users_profile')
+    .select('role')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (sasaran?.role === 'admin_finance') {
+    const { count } = await supabase
+      .from('users_profile')
+      .select('id', { count: 'exact', head: true })
+      .eq('role', 'admin_finance')
+      .eq('aktif', true)
+    if ((count ?? 0) <= 1) {
+      return {
+        error:
+          'Ini satu-satunya Admin/Finance yang aktif. Tambahkan Admin/Finance lain sebelum menghapus akun ini.',
+      }
+    }
+  }
+
+  const admin = createAdminClient()
+  const { error } = await admin.auth.admin.deleteUser(id)
+
+  if (error) {
+    // Kegagalan paling mungkin: FK dari dokumen yang pernah ia buat.
+    return {
+      error:
+        'Tidak dapat menghapus — pengguna ini kemungkinan sudah membuat atau menyetujui dokumen. Nonaktifkan akunnya saja agar riwayat tetap utuh.',
+    }
+  }
+
+  revalidatePath('/pengaturan/pengguna')
+  return { sukses: true }
 }

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-const RUTE_PUBLIK = ["/login", "/auth"];
+const RUTE_PUBLIK = ["/login", "/lupa-sandi", "/auth"];
 
 /** Menyegarkan sesi Supabase & memproteksi rute privat. */
 export async function updateSession(request: NextRequest) {

@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import Link from "next/link";
 import { login, type StatusLogin } from "./actions";
 import { Logo } from "@/components/layout/logo";
 
@@ -31,9 +32,14 @@ function FormLogin() {
       </div>
 
       <div>
-        <label htmlFor="password" className="text-xs font-medium text-slate-600">
-          Kata Sandi
-        </label>
+        <div className="flex items-center justify-between">
+          <label htmlFor="password" className="text-xs font-medium text-slate-600">
+            Kata Sandi
+          </label>
+          <Link href="/lupa-sandi" className="text-xs text-slate-500 hover:text-slate-800">
+            Lupa kata sandi?
+          </Link>
+        </div>
         <input
           id="password"
           name="password"
