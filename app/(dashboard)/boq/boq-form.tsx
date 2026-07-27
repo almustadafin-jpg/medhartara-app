@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, FolderPlus } from "lucide-react";
 import { simpanBoq, type FormState } from "./actions";
 import { Field, Input, Textarea, Select } from "@/components/ui/field";
 import { Button, TombolSimpan } from "@/components/ui/button";
@@ -9,9 +9,20 @@ import { formatIDR } from "@/lib/format";
 import { KATEGORI_ITEM } from "@/lib/constants";
 import type { Boq, BoqItem, Customer, Project } from "@/types";
 
+/**
+ * Editor BOQ dua tingkat.
+ *
+ * Tingkat atas: KATEGORI BESAR (mis. "Set & Properti", "Rental Equipment").
+ * Tingkat bawah: ITEM di dalam kategori itu (panggung, gate, dekorasi…).
+ *
+ * Struktur ini murni soal tampilan & penyusunan. Saat disimpan, tiap item
+ * tetap memancarkan pasangan field `item_*` berurutan — dengan `item_kategori`
+ * mengikuti kategori grupnya — sehingga server action & basis data tidak
+ * berubah: keduanya membaca daftar item yang sama seperti sebelumnya.
+ */
+
 interface Baris {
   kunci: string;
-  kategori: string;
   nama: string;
   deskripsi: string;
   kuantitas: string;
@@ -21,9 +32,14 @@ interface Baris {
   jual: string;
 }
 
-const barisKosong = (kategori = ""): Baris => ({
+interface Grup {
+  kunci: string;
+  kategori: string;
+  items: Baris[];
+}
+
+const barisKosong = (): Baris => ({
   kunci: crypto.randomUUID(),
-  kategori,
   nama: "",
   deskripsi: "",
   kuantitas: "1",
@@ -32,6 +48,32 @@ const barisKosong = (kategori = ""): Baris => ({
   modal: "",
   jual: "",
 });
+
+const grupKosong = (kategori = ""): Grup => ({
+  kunci: crypto.randomUUID(),
+  kategori,
+  items: [barisKosong()],
+});
+
+/** Kelompokkan item lama ke grup per kategori, urutan pertama-terlihat. */
+function kelompokkan(itemAwal: BoqItem[]): Grup[] {
+  const peta = new Map<string, Grup>();
+  for (const it of itemAwal) {
+    const kat = it.kategori ?? "";
+    if (!peta.has(kat)) peta.set(kat, { kunci: crypto.randomUUID(), kategori: kat, items: [] });
+    peta.get(kat)!.items.push({
+      kunci: it.id,
+      nama: it.nama,
+      deskripsi: it.deskripsi ?? "",
+      kuantitas: String(it.kuantitas),
+      satuan: it.satuan ?? "",
+      hari: String(it.hari),
+      modal: String(it.harga_modal),
+      jual: String(it.harga_jual),
+    });
+  }
+  return [...peta.values()];
+}
 
 export default function BoqForm({
   boq,
@@ -46,38 +88,56 @@ export default function BoqForm({
 }) {
   const [state, formAction] = useActionState<FormState, FormData>(simpanBoq, {});
 
-  const [items, setItems] = useState<Baris[]>(
-    itemAwal?.length
-      ? itemAwal.map((it) => ({
-          kunci: it.id,
-          kategori: it.kategori ?? "",
-          nama: it.nama,
-          deskripsi: it.deskripsi ?? "",
-          kuantitas: String(it.kuantitas),
-          satuan: it.satuan ?? "",
-          hari: String(it.hari),
-          modal: String(it.harga_modal),
-          jual: String(it.harga_jual),
-        }))
-      : [barisKosong(KATEGORI_ITEM[0])],
+  const [grup, setGrup] = useState<Grup[]>(
+    itemAwal?.length ? kelompokkan(itemAwal) : [grupKosong(KATEGORI_ITEM[0])],
   );
 
   const n = (v: string) => Number(v.replace(/[^\d.]/g, "")) || 0;
   const barisModal = (b: Baris) => n(b.kuantitas) * n(b.hari) * n(b.modal);
   const barisJual = (b: Baris) => n(b.kuantitas) * n(b.hari) * n(b.jual);
+  const grupModal = (g: Grup) => g.items.reduce((s, b) => s + barisModal(b), 0);
+  const grupJual = (g: Grup) => g.items.reduce((s, b) => s + barisJual(b), 0);
 
-  const totalModal = items.reduce((s, b) => s + barisModal(b), 0);
-  const totalJual = items.reduce((s, b) => s + barisJual(b), 0);
+  const totalModal = grup.reduce((s, g) => s + grupModal(g), 0);
+  const totalJual = grup.reduce((s, g) => s + grupJual(g), 0);
   const margin = totalJual - totalModal;
   const persenMargin = totalJual > 0 ? (margin / totalJual) * 100 : 0;
 
-  const ubah = (kunci: string, kolom: keyof Baris, nilai: string) =>
-    setItems((p) => p.map((b) => (b.kunci === kunci ? { ...b, [kolom]: nilai } : b)));
+  // ---- perubahan state ----
+  const ubahKategori = (gk: string, nilai: string) =>
+    setGrup((p) => p.map((g) => (g.kunci === gk ? { ...g, kategori: nilai } : g)));
+
+  const ubahItem = (gk: string, ik: string, kolom: keyof Baris, nilai: string) =>
+    setGrup((p) =>
+      p.map((g) =>
+        g.kunci === gk
+          ? { ...g, items: g.items.map((b) => (b.kunci === ik ? { ...b, [kolom]: nilai } : b)) }
+          : g,
+      ),
+    );
+
+  const tambahItem = (gk: string) =>
+    setGrup((p) =>
+      p.map((g) => (g.kunci === gk ? { ...g, items: [...g.items, barisKosong()] } : g)),
+    );
+
+  const hapusItem = (gk: string, ik: string) =>
+    setGrup((p) =>
+      p.map((g) =>
+        g.kunci === gk
+          ? { ...g, items: g.items.length === 1 ? g.items : g.items.filter((b) => b.kunci !== ik) }
+          : g,
+      ),
+    );
+
+  const tambahGrup = () => setGrup((p) => [...p, grupKosong()]);
+  const hapusGrup = (gk: string) =>
+    setGrup((p) => (p.length === 1 ? p : p.filter((g) => g.kunci !== gk)));
 
   const e = state.fieldErrors ?? {};
 
-  // Kategori dikelompokkan hanya untuk pemisah visual di editor.
-  const urutTampil = items;
+  // Indeks item rata, untuk mencocokkan pesan error per baris dari server.
+  let indeksRata = -1;
 
   return (
     <form action={formAction} className="space-y-6">
@@ -99,7 +159,12 @@ export default function BoqForm({
             </Field>
           </div>
 
-          <Field label="Pelanggan" name="customer_id" error={e.customer_id} petunjuk="Wajib bila BOQ akan ditarik jadi penawaran">
+          <Field
+            label="Pelanggan"
+            name="customer_id"
+            error={e.customer_id}
+            petunjuk="Wajib bila BOQ akan ditarik jadi penawaran"
+          >
             <Select id="customer_id" name="customer_id" defaultValue={boq?.customer_id ?? ""}>
               <option value="">— Belum ditentukan —</option>
               {pelanggan.map((c) => (
@@ -132,138 +197,165 @@ export default function BoqForm({
         </div>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5">
-        <div className="mb-1 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-700">Rincian Item</h2>
-          <Button type="button" varian="sekunder" onClick={() => setItems((p) => [...p, barisKosong()])}>
-            <Plus className="h-4 w-4" />
-            Tambah Item
-          </Button>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-700">Rincian per Kategori</h2>
+          <p className="text-xs text-slate-500">
+            Susun per kategori besar — mis. Set &amp; Properti, Rental Equipment — lalu isi
+            item di dalamnya. Harga modal biaya ke vendor; harga jual yang ditagihkan.
+          </p>
         </div>
-        <p className="mb-4 text-xs text-slate-500">
-          Harga modal adalah biaya ke vendor. Harga jual yang ditagihkan ke pelanggan.
-        </p>
+        <Button type="button" onClick={tambahGrup}>
+          <FolderPlus className="h-4 w-4" />
+          Tambah Kategori
+        </Button>
+      </div>
 
-        {e.items && <p className="mb-3 text-xs text-red-600">{e.items}</p>}
+      {e.items && <p className="text-xs text-red-600">{e.items}</p>}
 
-        <div className="space-y-4">
-          {urutTampil.map((b, i) => (
-            <div key={b.kunci} className="rounded-lg border border-slate-200 p-3">
-              <div className="mb-2 grid gap-2 sm:grid-cols-12">
-                <div className="sm:col-span-3">
-                  <input
-                    name="item_kategori"
-                    list="daftar-kategori"
-                    value={b.kategori}
-                    onChange={(ev) => ubah(b.kunci, "kategori", ev.target.value)}
-                    placeholder="Kategori"
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
-                  />
-                </div>
-                <div className="sm:col-span-8">
-                  <Input
-                    name="item_nama"
-                    value={b.nama}
-                    onChange={(ev) => ubah(b.kunci, "nama", ev.target.value)}
-                    placeholder="Nama item — mis. Kamera"
-                    error={!!e[`items.${i}`]}
-                  />
-                </div>
-                <div className="flex justify-end sm:col-span-1">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setItems((p) => (p.length === 1 ? p : p.filter((x) => x.kunci !== b.kunci)))
-                    }
-                    disabled={items.length === 1}
-                    className="rounded p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-30"
-                    title="Hapus item"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-
-              <Input
-                name="item_deskripsi"
-                value={b.deskripsi}
-                onChange={(ev) => ubah(b.kunci, "deskripsi", ev.target.value)}
-                placeholder="Spesifikasi — mis. Sony A7s Mark III (body only), termasuk tripod"
-                className="mb-2"
+      <div className="space-y-5">
+        {grup.map((g) => (
+          <section key={g.kunci} className="rounded-xl border border-slate-200 bg-white">
+            {/* Kepala kategori */}
+            <div className="flex items-center gap-3 border-b border-slate-100 bg-slate-50 px-4 py-3">
+              <input
+                list="daftar-kategori"
+                value={g.kategori}
+                onChange={(ev) => ubahKategori(g.kunci, ev.target.value)}
+                placeholder="Nama kategori besar — mis. Set & Properti"
+                className="w-full max-w-md rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:border-slate-900"
               />
-
-              <div className="grid gap-2 sm:grid-cols-12">
-                <div className="sm:col-span-2">
-                  <Input
-                    name="item_kuantitas"
-                    inputMode="decimal"
-                    value={b.kuantitas}
-                    onChange={(ev) => ubah(b.kunci, "kuantitas", ev.target.value)}
-                    placeholder="Qty"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <Input
-                    name="item_satuan"
-                    value={b.satuan}
-                    onChange={(ev) => ubah(b.kunci, "satuan", ev.target.value)}
-                    placeholder="Satuan"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <Input
-                    name="item_hari"
-                    inputMode="decimal"
-                    value={b.hari}
-                    onChange={(ev) => ubah(b.kunci, "hari", ev.target.value)}
-                    placeholder="Hari"
-                  />
-                </div>
-                <div className="sm:col-span-3">
-                  <Input
-                    name="item_modal"
-                    inputMode="numeric"
-                    value={b.modal}
-                    onChange={(ev) => ubah(b.kunci, "modal", ev.target.value)}
-                    placeholder="Harga modal"
-                  />
-                </div>
-                <div className="sm:col-span-3">
-                  <Input
-                    name="item_jual"
-                    inputMode="numeric"
-                    value={b.jual}
-                    onChange={(ev) => ubah(b.kunci, "jual", ev.target.value)}
-                    placeholder="Harga jual"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-2 flex flex-wrap justify-end gap-4 text-xs">
-                <span className="text-slate-500">
-                  Modal <b className="text-slate-700">{formatIDR(barisModal(b))}</b>
-                </span>
-                <span className="text-slate-500">
-                  Jual <b className="text-slate-900">{formatIDR(barisJual(b))}</b>
-                </span>
-                <span
-                  className={
-                    barisJual(b) - barisModal(b) >= 0 ? "text-emerald-700" : "text-red-600"
-                  }
-                >
-                  Margin <b>{formatIDR(barisJual(b) - barisModal(b))}</b>
-                </span>
-              </div>
+              <span className="ml-auto whitespace-nowrap text-xs text-slate-500">
+                Subtotal jual <b className="text-slate-900">{formatIDR(grupJual(g))}</b>
+              </span>
+              <button
+                type="button"
+                onClick={() => hapusGrup(g.kunci)}
+                disabled={grup.length === 1}
+                className="rounded p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-30"
+                title="Hapus kategori beserta itemnya"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
             </div>
-          ))}
-        </div>
 
-        <datalist id="daftar-kategori">
-          {KATEGORI_ITEM.map((k) => (
-            <option key={k} value={k} />
-          ))}
-        </datalist>
-      </section>
+            {/* Item dalam kategori */}
+            <div className="space-y-3 p-4">
+              {g.items.map((b) => {
+                indeksRata += 1;
+                const errBaris = !!e[`items.${indeksRata}`];
+                return (
+                  <div key={b.kunci} className="rounded-lg border border-slate-200 p-3">
+                    {/* Tiap item memancarkan kategori grupnya — server tak berubah. */}
+                    <input type="hidden" name="item_kategori" value={g.kategori} />
+
+                    <div className="mb-2 flex gap-2">
+                      <Input
+                        name="item_nama"
+                        value={b.nama}
+                        onChange={(ev) => ubahItem(g.kunci, b.kunci, "nama", ev.target.value)}
+                        placeholder="Nama item — mis. Panggung, Gate, Dekorasi"
+                        error={errBaris}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => hapusItem(g.kunci, b.kunci)}
+                        disabled={g.items.length === 1}
+                        className="shrink-0 rounded p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-30"
+                        title="Hapus item"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    <Input
+                      name="item_deskripsi"
+                      value={b.deskripsi}
+                      onChange={(ev) => ubahItem(g.kunci, b.kunci, "deskripsi", ev.target.value)}
+                      placeholder="Spesifikasi — mis. ukuran 6×4 m, rangka besi, karpet"
+                      className="mb-2"
+                    />
+
+                    <div className="grid gap-2 sm:grid-cols-12">
+                      <div className="sm:col-span-2">
+                        <Input
+                          name="item_kuantitas"
+                          inputMode="decimal"
+                          value={b.kuantitas}
+                          onChange={(ev) => ubahItem(g.kunci, b.kunci, "kuantitas", ev.target.value)}
+                          placeholder="Qty"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <Input
+                          name="item_satuan"
+                          value={b.satuan}
+                          onChange={(ev) => ubahItem(g.kunci, b.kunci, "satuan", ev.target.value)}
+                          placeholder="Satuan"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <Input
+                          name="item_hari"
+                          inputMode="decimal"
+                          value={b.hari}
+                          onChange={(ev) => ubahItem(g.kunci, b.kunci, "hari", ev.target.value)}
+                          placeholder="Hari"
+                        />
+                      </div>
+                      <div className="sm:col-span-3">
+                        <Input
+                          name="item_modal"
+                          inputMode="numeric"
+                          value={b.modal}
+                          onChange={(ev) => ubahItem(g.kunci, b.kunci, "modal", ev.target.value)}
+                          placeholder="Harga modal"
+                        />
+                      </div>
+                      <div className="sm:col-span-3">
+                        <Input
+                          name="item_jual"
+                          inputMode="numeric"
+                          value={b.jual}
+                          onChange={(ev) => ubahItem(g.kunci, b.kunci, "jual", ev.target.value)}
+                          placeholder="Harga jual"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-2 flex flex-wrap justify-end gap-4 text-xs">
+                      <span className="text-slate-500">
+                        Modal <b className="text-slate-700">{formatIDR(barisModal(b))}</b>
+                      </span>
+                      <span className="text-slate-500">
+                        Jual <b className="text-slate-900">{formatIDR(barisJual(b))}</b>
+                      </span>
+                      <span
+                        className={
+                          barisJual(b) - barisModal(b) >= 0 ? "text-emerald-700" : "text-red-600"
+                        }
+                      >
+                        Margin <b>{formatIDR(barisJual(b) - barisModal(b))}</b>
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+
+              <Button type="button" varian="sekunder" onClick={() => tambahItem(g.kunci)}>
+                <Plus className="h-4 w-4" />
+                Tambah Item di {g.kategori.trim() || "kategori ini"}
+              </Button>
+            </div>
+          </section>
+        ))}
+      </div>
+
+      <datalist id="daftar-kategori">
+        {KATEGORI_ITEM.map((k) => (
+          <option key={k} value={k} />
+        ))}
+      </datalist>
 
       <section className="rounded-xl border border-slate-200 bg-white p-5">
         <div className="grid gap-6 sm:grid-cols-2">
