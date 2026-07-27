@@ -7,7 +7,7 @@ import { Field, Input, Textarea, Select } from "@/components/ui/field";
 import { Button, TombolSimpan } from "@/components/ui/button";
 import { formatIDR } from "@/lib/format";
 import { KATEGORI_ITEM } from "@/lib/constants";
-import type { Boq, BoqItem, Customer, Project } from "@/types";
+import type { Boq, BoqItem, Customer, Project, UserRole } from "@/types";
 
 /**
  * Editor BOQ dua tingkat.
@@ -76,17 +76,23 @@ function kelompokkan(itemAwal: BoqItem[]): Grup[] {
 }
 
 export default function BoqForm({
+  peran,
   boq,
   itemAwal,
   pelanggan,
   proyek,
 }: {
+  peran: UserRole;
   boq?: Boq;
   itemAwal?: BoqItem[];
   pelanggan: Customer[];
   proyek: Project[];
 }) {
   const [state, formAction] = useActionState<FormState, FormData>(simpanBoq, {});
+
+  // Project Manager hanya mengisi harga MODAL. Harga jual (yang ditagihkan
+  // ke pelanggan) ditentukan Admin/Finance saat menyusun penawaran.
+  const hanyaModal = peran === "pm";
 
   const [grup, setGrup] = useState<Grup[]>(
     itemAwal?.length ? kelompokkan(itemAwal) : [grupKosong(KATEGORI_ITEM[0])],
@@ -202,7 +208,10 @@ export default function BoqForm({
           <h2 className="text-sm font-semibold text-slate-700">Rincian per Kategori</h2>
           <p className="text-xs text-slate-500">
             Susun per kategori besar — mis. Set &amp; Properti, Rental Equipment — lalu isi
-            item di dalamnya. Harga modal biaya ke vendor; harga jual yang ditagihkan.
+            item di dalamnya.
+            {hanyaModal
+              ? " Isi harga modal (biaya ke vendor). Harga jual ditentukan Admin/Finance."
+              : " Harga modal biaya ke vendor; harga jual yang ditagihkan."}
           </p>
         </div>
         <Button type="button" onClick={tambahGrup}>
@@ -226,7 +235,10 @@ export default function BoqForm({
                 className="w-full max-w-md rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:border-slate-900"
               />
               <span className="ml-auto whitespace-nowrap text-xs text-slate-500">
-                Subtotal jual <b className="text-slate-900">{formatIDR(grupJual(g))}</b>
+                {hanyaModal ? "Subtotal modal " : "Subtotal jual "}
+                <b className="text-slate-900">
+                  {formatIDR(hanyaModal ? grupModal(g) : grupJual(g))}
+                </b>
               </span>
               <button
                 type="button"
@@ -303,7 +315,7 @@ export default function BoqForm({
                           placeholder="Hari"
                         />
                       </div>
-                      <div className="sm:col-span-3">
+                      <div className={hanyaModal ? "sm:col-span-6" : "sm:col-span-3"}>
                         <Input
                           name="item_modal"
                           inputMode="numeric"
@@ -312,31 +324,43 @@ export default function BoqForm({
                           placeholder="Harga modal"
                         />
                       </div>
-                      <div className="sm:col-span-3">
-                        <Input
-                          name="item_jual"
-                          inputMode="numeric"
-                          value={b.jual}
-                          onChange={(ev) => ubahItem(g.kunci, b.kunci, "jual", ev.target.value)}
-                          placeholder="Harga jual"
-                        />
-                      </div>
+                      {hanyaModal ? (
+                        // Harga jual tetap dikirim (kosong → 0) agar server
+                        // membaca deretan field item yang sama seperti biasa.
+                        <input type="hidden" name="item_jual" value={b.jual} />
+                      ) : (
+                        <div className="sm:col-span-3">
+                          <Input
+                            name="item_jual"
+                            inputMode="numeric"
+                            value={b.jual}
+                            onChange={(ev) => ubahItem(g.kunci, b.kunci, "jual", ev.target.value)}
+                            placeholder="Harga jual"
+                          />
+                        </div>
+                      )}
                     </div>
 
                     <div className="mt-2 flex flex-wrap justify-end gap-4 text-xs">
                       <span className="text-slate-500">
                         Modal <b className="text-slate-700">{formatIDR(barisModal(b))}</b>
                       </span>
-                      <span className="text-slate-500">
-                        Jual <b className="text-slate-900">{formatIDR(barisJual(b))}</b>
-                      </span>
-                      <span
-                        className={
-                          barisJual(b) - barisModal(b) >= 0 ? "text-emerald-700" : "text-red-600"
-                        }
-                      >
-                        Margin <b>{formatIDR(barisJual(b) - barisModal(b))}</b>
-                      </span>
+                      {!hanyaModal && (
+                        <>
+                          <span className="text-slate-500">
+                            Jual <b className="text-slate-900">{formatIDR(barisJual(b))}</b>
+                          </span>
+                          <span
+                            className={
+                              barisJual(b) - barisModal(b) >= 0
+                                ? "text-emerald-700"
+                                : "text-red-600"
+                            }
+                          >
+                            Margin <b>{formatIDR(barisJual(b) - barisModal(b))}</b>
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                 );
@@ -364,25 +388,38 @@ export default function BoqForm({
           </Field>
 
           <dl className="space-y-2 self-start rounded-lg bg-slate-50 p-4 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-slate-500">Total modal</dt>
-              <dd>{formatIDR(totalModal)}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-slate-500">Total jual</dt>
-              <dd className="font-medium">{formatIDR(totalJual)}</dd>
-            </div>
             <div
-              className={`flex justify-between border-t border-slate-200 pt-2 text-base font-semibold ${
-                margin >= 0 ? "text-emerald-700" : "text-red-600"
+              className={`flex justify-between ${
+                hanyaModal ? "border-t-0 pt-0 text-base font-semibold" : ""
               }`}
             >
-              <dt>Margin</dt>
-              <dd>{formatIDR(margin)}</dd>
+              <dt className="text-slate-500">Total modal</dt>
+              <dd className={hanyaModal ? "text-slate-900" : ""}>{formatIDR(totalModal)}</dd>
             </div>
-            <p className="text-xs text-slate-400">
-              {persenMargin.toFixed(1)}% dari harga jual. Angka final dihitung ulang database.
-            </p>
+            {!hanyaModal && (
+              <>
+                <div className="flex justify-between">
+                  <dt className="text-slate-500">Total jual</dt>
+                  <dd className="font-medium">{formatIDR(totalJual)}</dd>
+                </div>
+                <div
+                  className={`flex justify-between border-t border-slate-200 pt-2 text-base font-semibold ${
+                    margin >= 0 ? "text-emerald-700" : "text-red-600"
+                  }`}
+                >
+                  <dt>Margin</dt>
+                  <dd>{formatIDR(margin)}</dd>
+                </div>
+                <p className="text-xs text-slate-400">
+                  {persenMargin.toFixed(1)}% dari harga jual. Angka final dihitung ulang database.
+                </p>
+              </>
+            )}
+            {hanyaModal && (
+              <p className="text-xs text-slate-400">
+                Harga jual ditentukan Admin/Finance saat menyusun penawaran.
+              </p>
+            )}
           </dl>
         </div>
       </section>

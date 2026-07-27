@@ -33,6 +33,7 @@ export default async function UbahBoqPage({ params }: { params: Promise<{ id: st
       </Link>
       <PageHeader judul={`Ubah ${b.nomor}`} deskripsi="Hanya BOQ draft atau ditolak yang dapat diubah" />
       <BoqForm
+        peran={profil.role}
         boq={b}
         itemAwal={(items as BoqItem[]) ?? []}
         pelanggan={(pelanggan as Customer[]) ?? []}

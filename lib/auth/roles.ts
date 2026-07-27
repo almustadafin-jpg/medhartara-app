@@ -25,6 +25,7 @@ export const MENU: ItemMenu[] = [
   { href: "/kuitansi",               label: "Kuitansi",   ikon: "🧿", peran: ["direktur", "admin_finance"] },
   { href: "/keuangan/pemasukan",     label: "Pemasukan",  ikon: "📥", peran: ["direktur", "admin_finance"] },
   { href: "/keuangan/pengeluaran",   label: "Pengeluaran",ikon: "📤", peran: ["direktur", "admin_finance", "pm"] },
+  { href: "/keuangan/pengajuan",     label: "Pengajuan Bayar", ikon: "🧾", peran: ["direktur", "admin_finance", "pm"] },
   { href: "/laporan",                label: "Laporan",    ikon: "📈", peran: ["direktur", "admin_finance", "pm"] },
   { href: "/pengaturan/perusahaan",  label: "Perusahaan", ikon: "⚙️", peran: ["direktur", "admin_finance"] },
   { href: "/pengaturan/pengguna",    label: "Pengguna",   ikon: "🔑", peran: ["admin_finance"] },

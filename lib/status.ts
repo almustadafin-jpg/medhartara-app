@@ -1,4 +1,4 @@
-import type { ProjectStatus, QuotationStatus, InvoiceStatus, TxnMethod, BoqStatus } from "@/types";
+import type { ProjectStatus, QuotationStatus, InvoiceStatus, TxnMethod, BoqStatus, PengajuanStatus } from "@/types";
 
 type Warna = "abu" | "hijau" | "merah" | "kuning" | "biru" | "ungu";
 
@@ -49,6 +49,12 @@ export const TRANSISI_INVOICE: Record<InvoiceStatus, InvoiceStatus[]> = {
   jatuh_tempo:      ["sebagian_dibayar", "lunas", "batal"],
   lunas:            [],
   batal:            [],
+};
+
+export const STATUS_PENGAJUAN: Record<PengajuanStatus, { label: string; warna: Warna }> = {
+  diajukan:  { label: "Diajukan",  warna: "kuning" },
+  disetujui: { label: "Disetujui", warna: "hijau" },
+  ditolak:   { label: "Ditolak",   warna: "merah" },
 };
 
 export const LABEL_METODE: Record<TxnMethod, string> = {

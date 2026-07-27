@@ -25,6 +25,7 @@ export default async function BoqBaruPage() {
       </Link>
       <PageHeader judul="BOQ Baru" deskripsi="Nomor dibuat otomatis saat disimpan" />
       <BoqForm
+        peran={profil.role}
         pelanggan={(pelanggan as Customer[]) ?? []}
         proyek={
           profil.role === "pm"

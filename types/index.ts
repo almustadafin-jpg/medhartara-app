@@ -231,3 +231,26 @@ export interface Kuitansi {
   ttd_jabatan: string | null;
   created_at: string;
 }
+
+export type PengajuanStatus = "diajukan" | "disetujui" | "ditolak";
+
+export interface PaymentRequest {
+  id: string;
+  company_id: string;
+  nomor: string;
+  project_id: string;
+  vendor_id: string | null;
+  kategori: string;
+  jumlah: number;
+  tanggal: string;
+  metode: TxnMethod;
+  deskripsi: string | null;
+  status: PengajuanStatus;
+  diajukan_oleh: string | null;
+  ditinjau_oleh: string | null;
+  ditinjau_pada: string | null;
+  catatan_tinjauan: string | null;
+  transaction_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
