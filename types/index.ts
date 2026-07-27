@@ -245,6 +245,7 @@ export interface PaymentRequest {
   tanggal: string;
   metode: TxnMethod;
   deskripsi: string | null;
+  rekening_tujuan: string | null;
   status: PengajuanStatus;
   diajukan_oleh: string | null;
   ditinjau_oleh: string | null;

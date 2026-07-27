@@ -31,12 +31,30 @@ function FormAjukan({ proyek, vendor, onSelesai }: {
   const router = useRouter();
   const [state, action] = useActionState<FormState, FormData>(buatPengajuan, {});
   const [jumlah, setJumlah] = useState("");
+  const [vendorId, setVendorId] = useState("");
+  const [rekening, setRekening] = useState("");
   useEffect(() => {
     if (state.sukses) { onSelesai(); router.refresh(); }
   }, [state.sukses, onSelesai, router]);
 
   const e = state.fieldErrors ?? {};
   const angka = Number(jumlah.replace(/[^\d]/g, "")) || 0;
+
+  // Rangkai rekening vendor jadi satu baris untuk disalin ke tujuan.
+  const rekeningVendor = (id: string) => {
+    const v = vendor.find((x) => x.id === id);
+    if (!v) return "";
+    return [v.bank_nama, v.bank_rekening, v.bank_atas_nama && `a.n. ${v.bank_atas_nama}`]
+      .filter(Boolean)
+      .join(" · ");
+  };
+
+  function pilihVendor(id: string) {
+    setVendorId(id);
+    const rek = rekeningVendor(id);
+    // Isi otomatis bila tujuan masih kosong; jangan menimpa isian manual.
+    if (rek && !rekening.trim()) setRekening(rek);
+  }
 
   return (
     <form action={action} className="space-y-4">
@@ -77,7 +95,8 @@ function FormAjukan({ proyek, vendor, onSelesai }: {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Vendor" name="vendor_id" error={e.vendor_id} petunjuk="Opsional">
-          <Select id="vendor_id" name="vendor_id" defaultValue="">
+          <Select id="vendor_id" name="vendor_id" value={vendorId}
+            onChange={(ev) => pilihVendor(ev.target.value)}>
             <option value="">— Tanpa vendor —</option>
             {vendor.map((v) => (
               <option key={v.id} value={v.id}>{v.nama} · {v.kategori}</option>
@@ -93,6 +112,13 @@ function FormAjukan({ proyek, vendor, onSelesai }: {
           </Select>
         </Field>
       </div>
+
+      <Field label="Rekening Tujuan" name="rekening_tujuan" error={e.rekening_tujuan}
+        petunjuk="Ke mana dana dikirim. Terisi otomatis dari vendor bila ada; boleh diketik manual untuk pihak lain.">
+        <Input id="rekening_tujuan" name="rekening_tujuan" value={rekening}
+          onChange={(ev) => setRekening(ev.target.value)}
+          placeholder="Mis. BCA 1234567890 a.n. CV Karya Bahagia" />
+      </Field>
 
       <Field label="Keterangan" name="deskripsi" error={e.deskripsi}>
         <Textarea id="deskripsi" name="deskripsi"
@@ -236,6 +262,9 @@ export default function PengajuanClient({
                     {namaProyek(p.project_id)}
                     {namaVendor(p.vendor_id) && (
                       <span className="block text-xs text-slate-400">{namaVendor(p.vendor_id)}</span>
+                    )}
+                    {p.rekening_tujuan && (
+                      <span className="block text-xs text-slate-500">💳 {p.rekening_tujuan}</span>
                     )}
                   </Td>
                   <Td><Badge>{p.kategori}</Badge></Td>

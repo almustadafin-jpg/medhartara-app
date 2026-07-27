@@ -54,6 +54,9 @@ export default async function DetailBoqPage({ params }: { params: Promise<{ id: 
 
   const adaHari = daftar.some((it) => Number(it.hari) !== 1);
   const bisaUbah =
+    boleh(profil.role, "kelolaBOQ") && ["draft", "ditolak", "diajukan"].includes(b.status);
+  // Hapus tetap terbatas draft/ditolak (sesuai kebijakan DELETE di database).
+  const bisaHapus =
     boleh(profil.role, "kelolaBOQ") && ["draft", "ditolak"].includes(b.status);
 
   return (
@@ -203,7 +206,7 @@ export default async function DetailBoqPage({ params }: { params: Promise<{ id: 
       )}
 
       <div className="mt-6 flex items-start justify-between gap-4">
-        {bisaUbah ? <HapusBoq id={b.id} nama={b.judul} /> : <span />}
+        {bisaHapus ? <HapusBoq id={b.id} nama={b.judul} /> : <span />}
         <AksiBoq
           id={b.id}
           status={b.status}

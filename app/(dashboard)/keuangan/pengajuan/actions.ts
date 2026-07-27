@@ -27,6 +27,7 @@ const skema = z.object({
   jumlah: z.number().positive("Jumlah harus lebih dari 0"),
   tanggal: z.string().min(1, "Tanggal wajib diisi"),
   metode: z.enum(["transfer", "tunai", "lainnya"]),
+  rekening_tujuan: z.string().trim().max(200).optional().transform((v) => (v === "" ? undefined : v)),
   deskripsi: z.string().trim().max(300).optional().transform((v) => (v === "" ? undefined : v)),
 });
 
@@ -53,6 +54,7 @@ export async function buatPengajuan(_prev: FormState, fd: FormData): Promise<For
     jumlah: Number(String(fd.get("jumlah") ?? "0").replace(/[^\d]/g, "")),
     tanggal: String(fd.get("tanggal") ?? ""),
     metode: String(fd.get("metode") ?? "transfer"),
+    rekening_tujuan: String(fd.get("rekening_tujuan") ?? ""),
     deskripsi: String(fd.get("deskripsi") ?? ""),
   });
 

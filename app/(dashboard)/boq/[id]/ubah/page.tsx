@@ -15,8 +15,8 @@ export default async function UbahBoqPage({ params }: { params: Promise<{ id: st
   if (!boq) notFound();
   const b = boq as Boq;
 
-  // Setelah diajukan, isinya terkunci — sama seperti aturan di database.
-  if (!["draft", "ditolak"].includes(b.status)) redirect(`/boq/${id}`);
+  // BOQ disetujui/arsip terkunci; draft/ditolak/diajukan masih boleh disunting.
+  if (!["draft", "ditolak", "diajukan"].includes(b.status)) redirect(`/boq/${id}`);
 
   const [{ data: items }, { data: pelanggan }, { data: proyek }] = await Promise.all([
     supabase.from("boq_items").select("*").eq("boq_id", id).order("urutan"),
@@ -31,7 +31,14 @@ export default async function UbahBoqPage({ params }: { params: Promise<{ id: st
       <Link href={`/boq/${id}`} className="mb-4 inline-block text-sm text-slate-500 hover:text-slate-800">
         ← Kembali ke BOQ
       </Link>
-      <PageHeader judul={`Ubah ${b.nomor}`} deskripsi="Hanya BOQ draft atau ditolak yang dapat diubah" />
+      <PageHeader
+        judul={`Ubah ${b.nomor}`}
+        deskripsi={
+          b.status === "diajukan"
+            ? "Menyimpan perubahan mengembalikan BOQ ke draft — ajukan ulang untuk ditinjau."
+            : "Tambah atau ubah item, lalu simpan."
+        }
+      />
       <BoqForm
         peran={profil.role}
         boq={b}
