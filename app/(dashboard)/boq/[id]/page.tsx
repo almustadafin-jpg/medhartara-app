@@ -58,6 +58,8 @@ export default async function DetailBoqPage({ params }: { params: Promise<{ id: 
   // Hapus tetap terbatas draft/ditolak (sesuai kebijakan DELETE di database).
   const bisaHapus =
     boleh(profil.role, "kelolaBOQ") && ["draft", "ditolak"].includes(b.status);
+  // PM hanya berurusan dengan harga modal; jual & margin disembunyikan.
+  const tampilJual = profil.role !== "pm";
 
   return (
     <div>
@@ -96,15 +98,17 @@ export default async function DetailBoqPage({ params }: { params: Promise<{ id: 
         aksi={<Badge warna={STATUS_BOQ[b.status].warna}>{STATUS_BOQ[b.status].label}</Badge>}
       />
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className={`grid gap-4 ${tampilJual ? "sm:grid-cols-3" : "sm:grid-cols-1"}`}>
         <KartuMetrik judul="Total Modal" nilai={formatIDR(b.total_modal)} />
-        <KartuMetrik judul="Total Jual" nilai={formatIDR(b.total_jual)} />
-        <KartuMetrik
-          judul="Margin"
-          nilai={formatIDR(margin)}
-          sub={`${persen.toFixed(1)}% dari harga jual`}
-          nada={margin >= 0 ? "positif" : "negatif"}
-        />
+        {tampilJual && <KartuMetrik judul="Total Jual" nilai={formatIDR(b.total_jual)} />}
+        {tampilJual && (
+          <KartuMetrik
+            judul="Margin"
+            nilai={formatIDR(margin)}
+            sub={`${persen.toFixed(1)}% dari harga jual`}
+            nada={margin >= 0 ? "positif" : "negatif"}
+          />
+        )}
       </div>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -150,13 +154,14 @@ export default async function DetailBoqPage({ params }: { params: Promise<{ id: 
             <Th>Satuan</Th>
             {adaHari && <Th className="text-right">Hari</Th>}
             <Th className="text-right">Modal</Th>
-            <Th className="text-right">Jual</Th>
-            <Th className="text-right">Total Jual</Th>
+            {tampilJual && <Th className="text-right">Jual</Th>}
+            <Th className="text-right">{tampilJual ? "Total Jual" : "Total Modal"}</Th>
           </Tr>
         </Thead>
         <tbody>
           {kelompok.map((g) => {
             const subJual = g.baris.reduce((s, it) => s + Number(it.subtotal_jual), 0);
+            const subModal = g.baris.reduce((s, it) => s + Number(it.subtotal_modal), 0);
             return (
               <>
                 <Tr key={`k-${g.kategori}`} className="bg-slate-50">
@@ -165,7 +170,7 @@ export default async function DetailBoqPage({ params }: { params: Promise<{ id: 
                   </Td>
                   <Td /><Td />
                   {adaHari && <Td />}
-                  <Td /><Td /><Td />
+                  <Td />{tampilJual && <Td />}<Td />
                 </Tr>
                 {g.baris.map((it) => (
                   <Tr key={it.id}>
@@ -179,8 +184,10 @@ export default async function DetailBoqPage({ params }: { params: Promise<{ id: 
                     <Td className="text-slate-500">{it.satuan ?? "—"}</Td>
                     {adaHari && <Td className="text-right">{Number(it.hari)}</Td>}
                     <Td className="text-right text-slate-500">{formatIDR(it.harga_modal)}</Td>
-                    <Td className="text-right">{formatIDR(it.harga_jual)}</Td>
-                    <Td className="text-right font-medium">{formatIDR(it.subtotal_jual)}</Td>
+                    {tampilJual && <Td className="text-right">{formatIDR(it.harga_jual)}</Td>}
+                    <Td className="text-right font-medium">
+                      {formatIDR(tampilJual ? it.subtotal_jual : it.subtotal_modal)}
+                    </Td>
                   </Tr>
                 ))}
                 <Tr key={`s-${g.kategori}`}>
@@ -189,8 +196,10 @@ export default async function DetailBoqPage({ params }: { params: Promise<{ id: 
                   </Td>
                   <Td /><Td />
                   {adaHari && <Td />}
-                  <Td /><Td />
-                  <Td className="text-right font-semibold">{formatIDR(subJual)}</Td>
+                  <Td />{tampilJual && <Td />}
+                  <Td className="text-right font-semibold">
+                    {formatIDR(tampilJual ? subJual : subModal)}
+                  </Td>
                 </Tr>
               </>
             );

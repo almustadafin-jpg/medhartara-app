@@ -31,6 +31,9 @@ export default async function BoqPage() {
   const namaProyek = (id: string | null) =>
     id ? daftarProyek.find((p) => p.id === id)?.nama ?? "—" : "—";
 
+  // PM hanya berurusan dengan harga modal; jual & margin disembunyikan.
+  const tampilJual = profil.role !== "pm";
+
   return (
     <div>
       <PageHeader
@@ -53,14 +56,14 @@ export default async function BoqPage() {
             <Th>Proyek</Th>
             <Th>Tanggal</Th>
             <Th className="text-right">Modal</Th>
-            <Th className="text-right">Jual</Th>
-            <Th className="text-right">Margin</Th>
+            {tampilJual && <Th className="text-right">Jual</Th>}
+            {tampilJual && <Th className="text-right">Margin</Th>}
             <Th>Status</Th>
           </Tr>
         </Thead>
         <tbody>
           {daftar.length === 0 ? (
-            <KondisiKosong kolom={8} pesan="Belum ada BOQ. Susun yang pertama." />
+            <KondisiKosong kolom={tampilJual ? 8 : 6} pesan="Belum ada BOQ. Susun yang pertama." />
           ) : (
             daftar.map((b) => {
               const margin = Number(b.total_jual) - Number(b.total_modal);
@@ -76,14 +79,18 @@ export default async function BoqPage() {
                   <Td className="text-sm text-slate-500">{namaProyek(b.project_id)}</Td>
                   <Td className="text-xs text-slate-500">{formatTanggalPendek(b.tanggal)}</Td>
                   <Td className="text-right text-slate-600">{formatIDR(b.total_modal)}</Td>
-                  <Td className="text-right font-medium">{formatIDR(b.total_jual)}</Td>
-                  <Td
-                    className={`text-right font-semibold ${
-                      margin >= 0 ? "text-emerald-700" : "text-red-600"
-                    }`}
-                  >
-                    {formatIDR(margin)}
-                  </Td>
+                  {tampilJual && (
+                    <Td className="text-right font-medium">{formatIDR(b.total_jual)}</Td>
+                  )}
+                  {tampilJual && (
+                    <Td
+                      className={`text-right font-semibold ${
+                        margin >= 0 ? "text-emerald-700" : "text-red-600"
+                      }`}
+                    >
+                      {formatIDR(margin)}
+                    </Td>
+                  )}
                   <Td>
                     <Badge warna={STATUS_BOQ[b.status].warna}>{STATUS_BOQ[b.status].label}</Badge>
                   </Td>
