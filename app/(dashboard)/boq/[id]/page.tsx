@@ -1,4 +1,3 @@
-import { Fragment } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -44,23 +43,13 @@ export default async function DetailBoqPage({ params }: { params: Promise<{ id: 
   const margin = Number(b.total_jual) - Number(b.total_modal);
   const persen = Number(b.total_jual) > 0 ? (margin / Number(b.total_jual)) * 100 : 0;
 
-  // Kelompokkan per kategori; item diurutkan agar sub-kelompok berdampingan
-  // (urutan sub mengikuti kemunculan pertama).
-  const kelompok: { kategori: string; baris: BoqItem[]; urutSub: string[] }[] = [];
+  // Kelompokkan per kategori, urutan mengikuti kemunculan pertama.
+  const kelompok: { kategori: string; baris: BoqItem[] }[] = [];
   for (const it of daftar) {
     const k = it.kategori?.trim() || "Lain-lain";
-    const sg = it.sub_kategori?.trim() || "";
-    let ada = kelompok.find((g) => g.kategori === k);
-    if (!ada) { ada = { kategori: k, baris: [], urutSub: [] }; kelompok.push(ada); }
-    if (!ada.urutSub.includes(sg)) ada.urutSub.push(sg);
-    ada.baris.push(it);
-  }
-  for (const g of kelompok) {
-    g.baris.sort(
-      (a, b2) =>
-        g.urutSub.indexOf(a.sub_kategori?.trim() || "") -
-        g.urutSub.indexOf(b2.sub_kategori?.trim() || ""),
-    );
+    const ada = kelompok.find((g) => g.kategori === k);
+    if (ada) ada.baris.push(it);
+    else kelompok.push({ kategori: k, baris: [it] });
   }
 
   const adaHari = daftar.some((it) => Number(it.hari) !== 1);
@@ -183,41 +172,24 @@ export default async function DetailBoqPage({ params }: { params: Promise<{ id: 
                   {adaHari && <Td />}
                   <Td />{tampilJual && <Td />}<Td />
                 </Tr>
-                {g.baris.map((it, idx) => {
-                  const subSekarang = it.sub_kategori?.trim() || "";
-                  const subSebelum = idx > 0 ? (g.baris[idx - 1].sub_kategori?.trim() || "") : null;
-                  const tampilSub = subSekarang !== "" && subSekarang !== subSebelum;
-                  return (
-                    <Fragment key={it.id}>
-                      {tampilSub && (
-                        <Tr className="bg-blue-50/50">
-                          <Td className="text-xs font-semibold uppercase tracking-wide text-blue-700">
-                            {subSekarang}
-                          </Td>
-                          <Td /><Td />
-                          {adaHari && <Td />}
-                          <Td />{tampilJual && <Td />}<Td />
-                        </Tr>
+                {g.baris.map((it) => (
+                  <Tr key={it.id}>
+                    <Td>
+                      <p className="font-medium text-slate-900">{it.nama}</p>
+                      {it.deskripsi && (
+                        <p className="text-xs text-slate-500">{it.deskripsi}</p>
                       )}
-                      <Tr>
-                        <Td>
-                          <p className="font-medium text-slate-900">{it.nama}</p>
-                          {it.deskripsi && (
-                            <p className="text-xs text-slate-500">{it.deskripsi}</p>
-                          )}
-                        </Td>
-                        <Td className="text-right">{Number(it.kuantitas)}</Td>
-                        <Td className="text-slate-500">{it.satuan ?? "—"}</Td>
-                        {adaHari && <Td className="text-right">{Number(it.hari)}</Td>}
-                        <Td className="text-right text-slate-500">{formatIDR(it.harga_modal)}</Td>
-                        {tampilJual && <Td className="text-right">{formatIDR(it.harga_jual)}</Td>}
-                        <Td className="text-right font-medium">
-                          {formatIDR(tampilJual ? it.subtotal_jual : it.subtotal_modal)}
-                        </Td>
-                      </Tr>
-                    </Fragment>
-                  );
-                })}
+                    </Td>
+                    <Td className="text-right">{Number(it.kuantitas)}</Td>
+                    <Td className="text-slate-500">{it.satuan ?? "—"}</Td>
+                    {adaHari && <Td className="text-right">{Number(it.hari)}</Td>}
+                    <Td className="text-right text-slate-500">{formatIDR(it.harga_modal)}</Td>
+                    {tampilJual && <Td className="text-right">{formatIDR(it.harga_jual)}</Td>}
+                    <Td className="text-right font-medium">
+                      {formatIDR(tampilJual ? it.subtotal_jual : it.subtotal_modal)}
+                    </Td>
+                  </Tr>
+                ))}
                 <Tr key={`s-${g.kategori}`}>
                   <Td className="text-right text-xs font-medium text-slate-500" >
                     Subtotal {g.kategori}
