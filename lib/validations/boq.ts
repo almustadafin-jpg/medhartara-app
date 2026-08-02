@@ -7,6 +7,12 @@ export const skemaItemBoq = z.object({
     .max(60)
     .optional()
     .transform((v) => (v === "" ? undefined : v)),
+  sub_kategori: z
+    .string()
+    .trim()
+    .max(60)
+    .optional()
+    .transform((v) => (v === "" ? undefined : v)),
   nama: z.string().trim().min(2, "Nama item wajib diisi").max(160),
   deskripsi: z
     .string()

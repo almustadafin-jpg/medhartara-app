@@ -208,6 +208,7 @@ export interface BoqItem {
   id: string;
   boq_id: string;
   kategori: string | null;
+  sub_kategori: string | null;
   nama: string;
   deskripsi: string | null;
   kuantitas: number;

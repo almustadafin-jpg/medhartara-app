@@ -61,6 +61,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     items: (items ?? []).map(
       (it): BarisBoqPDF => ({
         kategori: it.kategori,
+        sub_kategori: it.sub_kategori,
         nama: it.nama,
         deskripsi: it.deskripsi,
         kuantitas: Number(it.kuantitas),

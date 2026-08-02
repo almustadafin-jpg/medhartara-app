@@ -23,6 +23,7 @@ import type { Boq, BoqItem, Customer, Project, UserRole } from "@/types";
 
 interface Baris {
   kunci: string;
+  sub: string;
   nama: string;
   deskripsi: string;
   kuantitas: string;
@@ -38,8 +39,9 @@ interface Grup {
   items: Baris[];
 }
 
-const barisKosong = (): Baris => ({
+const barisKosong = (sub = ""): Baris => ({
   kunci: crypto.randomUUID(),
+  sub,
   nama: "",
   deskripsi: "",
   kuantitas: "1",
@@ -63,6 +65,7 @@ function kelompokkan(itemAwal: BoqItem[]): Grup[] {
     if (!peta.has(kat)) peta.set(kat, { kunci: crypto.randomUUID(), kategori: kat, items: [] });
     peta.get(kat)!.items.push({
       kunci: it.id,
+      sub: it.sub_kategori ?? "",
       nama: it.nama,
       deskripsi: it.deskripsi ?? "",
       kuantitas: String(it.kuantitas),
@@ -262,6 +265,13 @@ export default function BoqForm({
                     <input type="hidden" name="item_kategori" value={g.kategori} />
 
                     <div className="mb-2 flex gap-2">
+                      <Input
+                        name="item_sub_kategori"
+                        value={b.sub}
+                        onChange={(ev) => ubahItem(g.kunci, b.kunci, "sub", ev.target.value)}
+                        placeholder="Sub-kelompok (opsional) — mis. Main Stage"
+                        className="max-w-[220px]"
+                      />
                       <Input
                         name="item_nama"
                         value={b.nama}

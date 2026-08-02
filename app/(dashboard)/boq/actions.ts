@@ -31,6 +31,7 @@ const angka = (v: FormDataEntryValue | null) =>
 
 function bacaItems(fd: FormData) {
   const kategori = fd.getAll("item_kategori").map(String);
+  const subKategori = fd.getAll("item_sub_kategori").map(String);
   const nama = fd.getAll("item_nama").map(String);
   const deskripsi = fd.getAll("item_deskripsi").map(String);
   const kuantitas = fd.getAll("item_kuantitas").map(String);
@@ -42,6 +43,7 @@ function bacaItems(fd: FormData) {
   return nama
     .map((n, i) => ({
       kategori: (kategori[i] ?? "").trim() || undefined,
+      sub_kategori: (subKategori[i] ?? "").trim() || undefined,
       nama: n.trim(),
       deskripsi: (deskripsi[i] ?? "").trim() || undefined,
       kuantitas: Number(kuantitas[i] ?? 1) || 0,
