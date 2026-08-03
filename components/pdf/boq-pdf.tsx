@@ -188,8 +188,8 @@ export function BoqPDF({ data }: { data: DataBoqPDF }) {
           {adaHari && <Text style={[s.th, s.cHari]}>HARI</Text>}
           {internal && <Text style={[s.th, s.cAngka]}>HARGA MODAL</Text>}
           {internal && <Text style={[s.th, s.cAngka]}>JUMLAH MODAL</Text>}
-          <Text style={[s.th, s.cAngka]}>HARGA JUAL</Text>
-          <Text style={[s.th, s.cAngka]}>JUMLAH JUAL</Text>
+          <Text style={[s.th, s.cAngka]}>{internal ? "HARGA JUAL" : "HARGA"}</Text>
+          <Text style={[s.th, s.cAngka]}>{internal ? "JUMLAH JUAL" : "JUMLAH"}</Text>
         </View>
 
         {kelompok.map((g) => {

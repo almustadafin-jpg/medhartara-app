@@ -106,6 +106,20 @@ export default function ProyekForm({
         </Field>
       </div>
 
+      <Field
+        label="Lokasi Acara"
+        name="lokasi"
+        error={e.lokasi}
+        petunjuk="Muncul otomatis di BOQ, penawaran, dan invoice proyek ini"
+      >
+        <Input
+          id="lokasi"
+          name="lokasi"
+          defaultValue={proyek?.lokasi ?? ""}
+          placeholder="Ballroom BPJS Kesehatan"
+        />
+      </Field>
+
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Status" name="status" wajib error={e.status}>
           <Select id="status" name="status" defaultValue={proyek?.status ?? "prospek"}>
@@ -132,20 +146,6 @@ export default function ProyekForm({
           />
         </Field>
       </div>
-
-      <Field
-        label="Lokasi Acara"
-        name="lokasi"
-        error={e.lokasi}
-        petunjuk="Muncul otomatis di BOQ, penawaran, dan invoice proyek ini"
-      >
-        <Input
-          id="lokasi"
-          name="lokasi"
-          defaultValue={proyek?.lokasi ?? ""}
-          placeholder="Ballroom Hotel Mulia, Senayan, Jakarta"
-        />
-      </Field>
 
       <Field label="Deskripsi" name="deskripsi" error={e.deskripsi}>
         <Textarea id="deskripsi" name="deskripsi" defaultValue={proyek?.deskripsi ?? ""} />
