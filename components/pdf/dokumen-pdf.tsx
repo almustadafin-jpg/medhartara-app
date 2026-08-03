@@ -235,11 +235,13 @@ export function DokumenPDF({ data }: { data: DataDokumenPDF }) {
         </View>
 
         <View style={s.pihak}>
-          <View style={{ maxWidth: 260 }}>
+          <View style={{ flex: 1, paddingRight: 24 }}>
             <Text style={s.labelKecil}>
               {adalahInvoice ? "DITAGIHKAN KEPADA" : "KEPADA"}
             </Text>
-            <Text style={{ fontFamily: "Helvetica-Bold" }}>{data.pelanggan.nama}</Text>
+            <Text style={{ fontFamily: "Helvetica-Bold", lineHeight: 1.35 }}>
+              {data.pelanggan.nama}
+            </Text>
             {data.pelanggan.narahubung && (
               <Text style={s.barisKontak}>{data.pelanggan.narahubung}</Text>
             )}
@@ -251,12 +253,15 @@ export function DokumenPDF({ data }: { data: DataDokumenPDF }) {
             )}
           </View>
 
-          <View style={{ textAlign: "right" }}>
+          <View style={{ width: 200, textAlign: "right" }}>
             <Text style={s.redup}>Tanggal: {formatTanggal(data.tanggal)}</Text>
             <Text style={s.redup}>
               {data.tanggalKeduaLabel}: {formatTanggal(data.tanggalKedua)}
             </Text>
-            {data.proyek && <Text style={s.redup}>Proyek: {data.proyek}</Text>}
+            {/* Nama proyek tidak dicetak di invoice; tetap tampil di penawaran. */}
+            {!adalahInvoice && data.proyek && (
+              <Text style={s.redup}>Proyek: {data.proyek}</Text>
+            )}
           </View>
         </View>
 
@@ -313,18 +318,9 @@ export function DokumenPDF({ data }: { data: DataDokumenPDF }) {
             <Text>{formatIDR(data.total)}</Text>
           </View>
 
-          {adalahInvoice && (
-            <>
-              <View style={s.barisRingkas}>
-                <Text style={s.redup}>Sudah dibayar</Text>
-                <Text style={{ color: warna.hijau }}>{formatIDR(data.dibayar ?? 0)}</Text>
-              </View>
-              <View style={[s.barisRingkas, { fontFamily: "Helvetica-Bold" }]}>
-                <Text>Sisa tagihan</Text>
-                <Text>{formatIDR(data.sisa ?? 0)}</Text>
-              </View>
-            </>
-          )}
+          {/* "Sudah dibayar" & "Sisa tagihan" sengaja TIDAK dicetak di invoice —
+              itu catatan administrasi internal, bukan bagian tagihan ke pelanggan.
+              Riwayat pembayaran tetap ada di halaman detail invoice & kuitansi. */}
           </View>
         </View>
 
