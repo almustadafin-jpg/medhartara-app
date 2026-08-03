@@ -92,7 +92,12 @@ export async function GET(
     })),
     catatan: inv.catatan,
     ditandatangani: null,
-    penandaTangan: { nama: inv.ttd_nama, jabatan: inv.ttd_jabatan },
+    // Invoice hasil konversi penawaran tidak membawa penanda tangan; agar
+    // blok tanda tangan tetap tercetak, jatuh ke nama perusahaan.
+    penandaTangan: {
+      nama: inv.ttd_nama || perusahaan?.nama || "Medhartara Production",
+      jabatan: inv.ttd_jabatan,
+    },
   };
 
   const berkas = await renderToBuffer(DokumenPDF({ data }));
