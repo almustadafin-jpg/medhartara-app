@@ -98,7 +98,8 @@ export default function BoqForm({
     itemAwal?.length ? kelompokkan(itemAwal) : [grupKosong(KATEGORI_ITEM[0])],
   );
 
-  const n = (v: string) => Number(v.replace(/[^\d.]/g, "")) || 0;
+  // Terima koma maupun titik sebagai pemisah desimal (mis. "1,5" hari).
+  const n = (v: string) => Number(v.replace(",", ".").replace(/[^\d.]/g, "")) || 0;
   const barisModal = (b: Baris) => n(b.kuantitas) * n(b.hari) * n(b.modal);
   const barisJual = (b: Baris) => n(b.kuantitas) * n(b.hari) * n(b.jual);
   const grupModal = (g: Grup) => g.items.reduce((s, b) => s + barisModal(b), 0);
@@ -312,7 +313,7 @@ export default function BoqForm({
                           inputMode="decimal"
                           value={b.hari}
                           onChange={(ev) => ubahItem(g.kunci, b.kunci, "hari", ev.target.value)}
-                          placeholder="Hari"
+                          placeholder="Hari (mis. 1,5)"
                         />
                       </div>
                       <div className={hanyaModal ? "sm:col-span-6" : "sm:col-span-3"}>

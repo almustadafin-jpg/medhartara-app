@@ -44,9 +44,9 @@ function bacaItems(fd: FormData) {
       kategori: (kategori[i] ?? "").trim() || undefined,
       nama: n.trim(),
       deskripsi: (deskripsi[i] ?? "").trim() || undefined,
-      kuantitas: Number(kuantitas[i] ?? 1) || 0,
+      kuantitas: Number(String(kuantitas[i] ?? "1").replace(",", ".")) || 0,
       satuan: (satuan[i] ?? "").trim() || undefined,
-      hari: Number(hari[i] ?? 1) || 0,
+      hari: Number(String(hari[i] ?? "1").replace(",", ".")) || 0,
       harga_modal: Number((modal[i] ?? "0").replace(/[^\d]/g, "")),
       harga_jual: Number((jual[i] ?? "0").replace(/[^\d]/g, "")),
     }))

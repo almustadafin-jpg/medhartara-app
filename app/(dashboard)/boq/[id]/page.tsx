@@ -67,10 +67,13 @@ export default async function DetailBoqPage({ params }: { params: Promise<{ id: 
         <Link href="/boq" className="text-sm text-slate-500 hover:text-slate-800">
           ← Kembali ke daftar BOQ
         </Link>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           {bisaUbah && (
-            <Link href={`/boq/${b.id}/ubah`} className="text-sm text-slate-500 hover:text-slate-800">
-              Ubah BOQ
+            <Link
+              href={`/boq/${b.id}/ubah`}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-700"
+            >
+              ✏️ Ubah BOQ
             </Link>
           )}
           <a
@@ -182,7 +185,9 @@ export default async function DetailBoqPage({ params }: { params: Promise<{ id: 
                     </Td>
                     <Td className="text-right">{Number(it.kuantitas)}</Td>
                     <Td className="text-slate-500">{it.satuan ?? "—"}</Td>
-                    {adaHari && <Td className="text-right">{Number(it.hari)}</Td>}
+                    {adaHari && (
+                      <Td className="text-right">{String(Number(it.hari)).replace(".", ",")}</Td>
+                    )}
                     <Td className="text-right text-slate-500">{formatIDR(it.harga_modal)}</Td>
                     {tampilJual && <Td className="text-right">{formatIDR(it.harga_jual)}</Td>}
                     <Td className="text-right font-medium">

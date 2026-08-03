@@ -212,7 +212,9 @@ export function BoqPDF({ data }: { data: DataBoqPDF }) {
                     </View>
                     <Text style={s.cQty}>{Number(it.kuantitas)}</Text>
                     <Text style={s.cSat}>{it.satuan ?? "—"}</Text>
-                    {adaHari && <Text style={s.cHari}>{Number(it.hari)}</Text>}
+                    {adaHari && (
+                      <Text style={s.cHari}>{String(Number(it.hari)).replace(".", ",")}</Text>
+                    )}
                     {internal && (
                       <Text style={[s.cAngka, { color: warna.redup }]}>{formatIDR(it.harga_modal)}</Text>
                     )}

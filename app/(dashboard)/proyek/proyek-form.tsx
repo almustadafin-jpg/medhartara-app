@@ -81,8 +81,13 @@ export default function ProyekForm({
         </Field>
       )}
 
+      <p className="text-sm font-medium text-slate-700">Tanggal Pelaksanaan Acara</p>
+      <p className="-mt-3 text-xs text-slate-500">
+        Untuk acara beberapa hari, isi tanggal mulai dan selesai (mis. 2–3 hari). Tanggal ini
+        muncul otomatis di BOQ, penawaran, dan invoice.
+      </p>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Tanggal Mulai" name="tanggal_mulai" error={e.tanggal_mulai}>
+        <Field label="Mulai" name="tanggal_mulai" error={e.tanggal_mulai}>
           <Input
             id="tanggal_mulai"
             name="tanggal_mulai"
@@ -90,7 +95,7 @@ export default function ProyekForm({
             defaultValue={proyek?.tanggal_mulai ?? ""}
           />
         </Field>
-        <Field label="Tanggal Selesai" name="tanggal_selesai" error={e.tanggal_selesai}>
+        <Field label="Selesai" name="tanggal_selesai" error={e.tanggal_selesai} petunjuk="Boleh sama dengan tanggal mulai untuk acara 1 hari">
           <Input
             id="tanggal_selesai"
             name="tanggal_selesai"
