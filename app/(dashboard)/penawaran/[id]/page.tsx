@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabel, Thead, Th, Td, Tr } from "@/components/ui/table";
 import { STATUS_PENAWARAN } from "@/lib/status";
 import { formatIDR, formatTanggal, formatWaktu } from "@/lib/format";
+import { hitungPPN, labelPPN } from "@/lib/pajak";
 import AksiPenawaran from "./aksi-penawaran";
 import HapusPenawaran from "./hapus-penawaran";
 import type { Quotation, QuotationItem, Customer, Project, Company, UsersProfile } from "@/types";
@@ -48,7 +49,7 @@ export default async function DetailPenawaranPage({
 
   const potongan = Number(q.subtotal) * Number(q.diskon_persen) / 100;
   const dasar = Number(q.subtotal) - potongan;
-  const ppn = dasar * Number(q.pajak_persen) / 100;
+  const ppn = hitungPPN(dasar, Number(q.pajak_persen));
 
   return (
     <div>
@@ -170,7 +171,7 @@ export default async function DetailPenawaranPage({
             )}
             {Number(q.pajak_persen) > 0 && (
               <div className="flex justify-between">
-                <dt className="text-slate-500">PPN {Number(q.pajak_persen)}%</dt>
+                <dt className="text-slate-500">{labelPPN(Number(q.pajak_persen))}</dt>
                 <dd>{formatIDR(ppn)}</dd>
               </div>
             )}

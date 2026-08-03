@@ -3,6 +3,7 @@ import {
 } from "@react-pdf/renderer";
 import { formatIDR, formatTanggal } from "@/lib/format";
 import { terbilangRupiah } from "@/lib/terbilang";
+import { hitungPPN, labelPPN } from "@/lib/pajak";
 
 /**
  * Template PDF bersama untuk Penawaran & Invoice.
@@ -14,12 +15,13 @@ import { terbilangRupiah } from "@/lib/terbilang";
  */
 
 const warna = {
-  teks: "#0f172a",
-  redup: "#64748b",
+  // Seluruh teks dokumen memakai hitam agar kontras & tegas saat dicetak.
+  teks: "#000000",
+  redup: "#000000",
   garis: "#e2e8f0",
   latar: "#f8fafc",
-  merah: "#dc2626",
-  hijau: "#047857",
+  merah: "#000000",
+  hijau: "#000000",
 };
 
 const s = StyleSheet.create({
@@ -191,7 +193,7 @@ export interface DataDokumenPDF {
 export function DokumenPDF({ data }: { data: DataDokumenPDF }) {
   const potongan = (data.subtotal * data.diskon_persen) / 100;
   const dasar = data.subtotal - potongan;
-  const ppn = (dasar * data.pajak_persen) / 100;
+  const ppn = hitungPPN(dasar, data.pajak_persen);
   const adalahInvoice = data.jenis === "invoice";
   const adaLogo = Boolean(data.perusahaan.logo_url);
 
@@ -308,7 +310,7 @@ export function DokumenPDF({ data }: { data: DataDokumenPDF }) {
 
           {data.pajak_persen > 0 && (
             <View style={s.barisRingkas}>
-              <Text style={s.redup}>PPN {data.pajak_persen}%</Text>
+              <Text style={s.redup}>{labelPPN(data.pajak_persen)}</Text>
               <Text>{formatIDR(ppn)}</Text>
             </View>
           )}

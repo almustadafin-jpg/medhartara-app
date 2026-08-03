@@ -6,6 +6,7 @@ import { simpanPenawaran, ringkasanRabProyek, type FormState } from "./actions";
 import { Field, Input, Textarea, Select } from "@/components/ui/field";
 import { Button, TombolSimpan } from "@/components/ui/button";
 import { formatIDR } from "@/lib/format";
+import { hitungPPN, labelPPN } from "@/lib/pajak";
 import { HitungMundur } from "@/components/ui/hitung-mundur";
 import type { Customer, Project, Quotation, QuotationItem } from "@/types";
 
@@ -54,7 +55,7 @@ export default function PenawaranForm({
   );
 
   const [diskon, setDiskon] = useState(String(penawaran?.diskon_persen ?? 0));
-  const [pajak, setPajak] = useState(String(penawaran?.pajak_persen ?? 11));
+  const [pajak, setPajak] = useState(String(penawaran?.pajak_persen ?? 12));
   const [projectId, setProjectId] = useState(penawaran?.project_id ?? "");
   const [narikRab, mulaiNarik] = useTransition();
 
@@ -91,7 +92,7 @@ export default function PenawaranForm({
   const subtotal = items.reduce((s, it) => s + angka(it.kuantitas) * angka(it.harga), 0);
   const potongan = (subtotal * angka(diskon)) / 100;
   const dasar = subtotal - potongan;
-  const ppn = (dasar * angka(pajak)) / 100;
+  const ppn = hitungPPN(dasar, angka(pajak));
   const total = dasar + ppn;
 
 
@@ -298,7 +299,12 @@ export default function PenawaranForm({
                   onChange={(ev) => setDiskon(ev.target.value)}
                 />
               </Field>
-              <Field label="PPN (%)" name="pajak_persen" error={e.pajak_persen}>
+              <Field
+                label="PPN (%)"
+                name="pajak_persen"
+                error={e.pajak_persen}
+                petunjuk="12% atas DPP Nilai Lain (11/12) — efektif 11%"
+              >
                 <Input
                   id="pajak_persen"
                   name="pajak_persen"
@@ -344,7 +350,7 @@ export default function PenawaranForm({
             {angka(diskon) > 0 && (
               <Baris label={`Diskon ${diskon}%`} nilai={`−${formatIDR(potongan)}`} />
             )}
-            {angka(pajak) > 0 && <Baris label={`PPN ${pajak}%`} nilai={formatIDR(ppn)} />}
+            {angka(pajak) > 0 && <Baris label={labelPPN(pajak)} nilai={formatIDR(ppn)} />}
             <div className="flex justify-between border-t border-slate-200 pt-2 text-base font-semibold">
               <dt>Total</dt>
               <dd>{formatIDR(total)}</dd>

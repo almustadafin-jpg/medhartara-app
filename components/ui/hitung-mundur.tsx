@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { formatIDR } from "@/lib/format";
+import { FAKTOR_DPP } from "@/lib/pajak";
 
 /**
  * Menghitung mundur dari total yang diinginkan.
@@ -32,9 +33,10 @@ export function HitungMundur({
   const [target, setTarget] = useState("");
 
   const angka = Number(target.replace(/[^\d]/g, "")) || 0;
-  const pengali = (1 - diskonPersen / 100) * (1 + pajakPersen / 100);
+  // PPN atas DPP Nilai Lain: total = subtotal × (1 − diskon%) × (1 + pajak% × 11/12)
+  const pengali = (1 - diskonPersen / 100) * (1 + (pajakPersen / 100) * FAKTOR_DPP);
   const subtotalTarget = pengali > 0 ? angka / pengali : 0;
-  const pajakNanti = subtotalTarget * (1 - diskonPersen / 100) * (pajakPersen / 100);
+  const pajakNanti = subtotalTarget * (1 - diskonPersen / 100) * (pajakPersen / 100) * FAKTOR_DPP;
 
   const siap = angka > 0 && subtotalSaatIni > 0 && pengali > 0;
 
@@ -97,7 +99,7 @@ export function HitungMundur({
           </div>
           {pajakPersen > 0 && (
             <div className="flex justify-between">
-              <dt className="text-slate-500">PPN {pajakPersen}%</dt>
+              <dt className="text-slate-500">PPN {pajakPersen}% (DPP Nilai Lain)</dt>
               <dd>{formatIDR(pajakNanti)}</dd>
             </div>
           )}

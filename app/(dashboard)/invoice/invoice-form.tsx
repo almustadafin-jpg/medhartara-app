@@ -6,6 +6,7 @@ import { simpanInvoice, type FormState } from "./actions";
 import { Field, Input, Textarea, Select } from "@/components/ui/field";
 import { Button, TombolSimpan } from "@/components/ui/button";
 import { formatIDR } from "@/lib/format";
+import { hitungPPN, labelPPN } from "@/lib/pajak";
 import { HitungMundur } from "@/components/ui/hitung-mundur";
 import type { Customer, Project, Invoice, InvoiceItem } from "@/types";
 
@@ -60,14 +61,14 @@ export default function InvoiceForm({
   );
 
   const [diskon, setDiskon] = useState(String(invoice?.diskon_persen ?? 0));
-  const [pajak, setPajak] = useState(String(invoice?.pajak_persen ?? 11));
+  const [pajak, setPajak] = useState(String(invoice?.pajak_persen ?? 12));
 
   const angka = (v: string) => Number(v.replace(/[^\d.]/g, "")) || 0;
 
   const subtotal = items.reduce((s, it) => s + angka(it.kuantitas) * angka(it.harga), 0);
   const potongan = (subtotal * angka(diskon)) / 100;
   const dasar = subtotal - potongan;
-  const ppn = (dasar * angka(pajak)) / 100;
+  const ppn = hitungPPN(dasar, angka(pajak));
   const total = dasar + ppn;
 
 
@@ -257,7 +258,7 @@ export default function InvoiceForm({
                   onChange={(ev) => setDiskon(ev.target.value)}
                 />
               </Field>
-              <Field label="PPN (%)" name="pajak_persen" error={e.pajak_persen}>
+              <Field label="PPN (%)" name="pajak_persen" error={e.pajak_persen} petunjuk="12% atas DPP Nilai Lain (11/12) — efektif 11%">
                 <Input
                   id="pajak_persen"
                   name="pajak_persen"
@@ -311,7 +312,7 @@ export default function InvoiceForm({
             )}
             {angka(pajak) > 0 && (
               <div className="flex justify-between">
-                <dt className="text-slate-500">PPN {pajak}%</dt>
+                <dt className="text-slate-500">{labelPPN(pajak)}</dt>
                 <dd>{formatIDR(ppn)}</dd>
               </div>
             )}
