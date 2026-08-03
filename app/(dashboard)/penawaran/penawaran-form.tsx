@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { Trash2, Plus } from "lucide-react";
-import { simpanPenawaran, type FormState } from "./actions";
+import { useActionState, useState, useTransition } from "react";
+import { Trash2, Plus, Download } from "lucide-react";
+import { simpanPenawaran, ringkasanRabProyek, type FormState } from "./actions";
 import { Field, Input, Textarea, Select } from "@/components/ui/field";
 import { Button, TombolSimpan } from "@/components/ui/button";
 import { formatIDR } from "@/lib/format";
@@ -55,6 +55,35 @@ export default function PenawaranForm({
 
   const [diskon, setDiskon] = useState(String(penawaran?.diskon_persen ?? 0));
   const [pajak, setPajak] = useState(String(penawaran?.pajak_persen ?? 11));
+  const [projectId, setProjectId] = useState(penawaran?.project_id ?? "");
+  const [narikRab, mulaiNarik] = useTransition();
+
+  /** Tarik RAB proyek terpilih → satu baris per kategori besar. */
+  function tarikRab() {
+    if (!projectId) {
+      window.alert("Pilih proyek dulu untuk menarik RAB-nya.");
+      return;
+    }
+    const adaIsi = items.some((it) => it.deskripsi.trim() || angka(it.harga) > 0);
+    if (adaIsi && !window.confirm("Item yang ada akan diganti dengan ringkasan RAB. Lanjutkan?")) {
+      return;
+    }
+    mulaiNarik(async () => {
+      const hasil = await ringkasanRabProyek(projectId);
+      if (hasil.error) {
+        window.alert(hasil.error);
+        return;
+      }
+      const baris: BarisItem[] = (hasil.items ?? []).map((it) => ({
+        kunci: crypto.randomUUID(),
+        deskripsi: it.kategori,
+        kuantitas: "1",
+        satuan: "paket",
+        harga: String(it.total),
+      }));
+      if (baris.length) setItems(baris);
+    });
+  }
 
   const angka = (v: string) => Number(v.replace(/[^\d.]/g, "")) || 0;
 
@@ -128,15 +157,37 @@ export default function PenawaranForm({
             </Select>
           </Field>
 
-          <Field label="Proyek" name="project_id" error={e.project_id} petunjuk="Boleh dikosongkan">
-            <Select id="project_id" name="project_id" defaultValue={penawaran?.project_id ?? ""}>
-              <option value="">— Tanpa proyek —</option>
-              {proyek.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nama}
-                </option>
-              ))}
-            </Select>
+          <Field
+            label="Proyek"
+            name="project_id"
+            error={e.project_id}
+            petunjuk="Pilih proyek lalu klik Tarik RAB untuk mengisi item otomatis"
+          >
+            <div className="flex gap-2">
+              <Select
+                id="project_id"
+                name="project_id"
+                value={projectId}
+                onChange={(ev) => setProjectId(ev.target.value)}
+              >
+                <option value="">— Tanpa proyek —</option>
+                {proyek.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nama}
+                  </option>
+                ))}
+              </Select>
+              <Button
+                type="button"
+                varian="sekunder"
+                onClick={tarikRab}
+                disabled={!projectId || narikRab}
+                className="shrink-0 whitespace-nowrap"
+              >
+                <Download className="h-4 w-4" />
+                {narikRab ? "Menarik…" : "Tarik RAB"}
+              </Button>
+            </div>
           </Field>
 
           <Field label="Tanggal" name="tanggal" wajib error={e.tanggal}>

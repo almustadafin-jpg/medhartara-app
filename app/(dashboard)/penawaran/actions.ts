@@ -15,6 +15,49 @@ export type FormState = {
   sukses?: boolean;
 };
 
+/**
+ * Ringkasan RAB proyek untuk ditarik ke penawaran: satu baris per
+ * KATEGORI BESAR (Set & Properti, Rental Equipment, …) berisi total
+ * harga jualnya — bukan rincian item. Hanya menghitung BOQ berstatus
+ * disetujui milik proyek tersebut. Harga modal tidak pernah ikut.
+ */
+export async function ringkasanRabProyek(
+  projectId: string,
+): Promise<{ error?: string; items?: { kategori: string; total: number }[] }> {
+  const profil = await wajibLogin();
+  if (!boleh(profil.role, "kelolaPenawaran")) return { error: "Tanpa izin." };
+  if (!projectId) return { error: "Pilih proyek terlebih dahulu." };
+
+  const supabase = await createClient();
+  const { data: boqs } = await supabase
+    .from("boq")
+    .select("id")
+    .eq("project_id", projectId)
+    .eq("status", "disetujui");
+
+  if (!boqs?.length) {
+    return { error: "Proyek ini belum memiliki RAB yang disetujui." };
+  }
+
+  const { data: items } = await supabase
+    .from("boq_items")
+    .select("kategori, subtotal_jual")
+    .in("boq_id", boqs.map((b) => b.id));
+
+  const peta = new Map<string, number>();
+  for (const it of items ?? []) {
+    const k = (it.kategori ?? "Lain-lain").trim() || "Lain-lain";
+    peta.set(k, (peta.get(k) ?? 0) + Number(it.subtotal_jual));
+  }
+
+  const out = [...peta.entries()]
+    .map(([kategori, total]) => ({ kategori, total }))
+    .filter((x) => x.total > 0);
+
+  if (!out.length) return { error: "RAB proyek belum memiliki nilai jual." };
+  return { items: out };
+}
+
 function petakan(issues: { path: (string | number)[]; message: string }[]) {
   const f: Record<string, string> = {};
   for (const i of issues) {
