@@ -53,6 +53,7 @@ export default async function DetailBoqPage({ params }: { params: Promise<{ id: 
   }
 
   const adaHari = daftar.some((it) => Number(it.hari) !== 1);
+  const adaWaktu = daftar.some((it) => Number(it.waktu) !== 1);
   const bisaUbah =
     boleh(profil.role, "kelolaBOQ") && ["draft", "ditolak", "diajukan"].includes(b.status);
   // Hapus tetap terbatas draft/ditolak (sesuai kebijakan DELETE di database).
@@ -152,10 +153,11 @@ export default async function DetailBoqPage({ params }: { params: Promise<{ id: 
       <Tabel>
         <Thead>
           <Tr>
-            <Th>Item &amp; Deskripsi</Th>
+            <Th>Description</Th>
             <Th className="text-right">Qty</Th>
             <Th>Satuan</Th>
-            {adaHari && <Th className="text-right">Hari</Th>}
+            {adaHari && <Th className="text-right">Days</Th>}
+            {adaWaktu && <Th className="text-right">Time</Th>}
             <Th className="text-right">Modal</Th>
             {tampilJual && <Th className="text-right">Jual</Th>}
             <Th className="text-right">{tampilJual ? "Total Jual" : "Total Modal"}</Th>
@@ -173,6 +175,7 @@ export default async function DetailBoqPage({ params }: { params: Promise<{ id: 
                   </Td>
                   <Td /><Td />
                   {adaHari && <Td />}
+                  {adaWaktu && <Td />}
                   <Td />{tampilJual && <Td />}<Td />
                 </Tr>
                 {g.baris.map((it) => (
@@ -182,11 +185,17 @@ export default async function DetailBoqPage({ params }: { params: Promise<{ id: 
                       {it.deskripsi && (
                         <p className="text-xs text-slate-500">{it.deskripsi}</p>
                       )}
+                      {it.keterangan && (
+                        <p className="text-xs italic text-slate-400">{it.keterangan}</p>
+                      )}
                     </Td>
                     <Td className="text-right">{Number(it.kuantitas)}</Td>
                     <Td className="text-slate-500">{it.satuan ?? "—"}</Td>
                     {adaHari && (
                       <Td className="text-right">{String(Number(it.hari)).replace(".", ",")}</Td>
+                    )}
+                    {adaWaktu && (
+                      <Td className="text-right">{String(Number(it.waktu)).replace(".", ",")}</Td>
                     )}
                     <Td className="text-right text-slate-500">{formatIDR(it.harga_modal)}</Td>
                     {tampilJual && <Td className="text-right">{formatIDR(it.harga_jual)}</Td>}
@@ -201,6 +210,7 @@ export default async function DetailBoqPage({ params }: { params: Promise<{ id: 
                   </Td>
                   <Td /><Td />
                   {adaHari && <Td />}
+                  {adaWaktu && <Td />}
                   <Td />{tampilJual && <Td />}
                   <Td className="text-right font-semibold">
                     {formatIDR(tampilJual ? subJual : subModal)}

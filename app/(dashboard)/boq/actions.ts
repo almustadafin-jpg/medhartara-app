@@ -36,8 +36,10 @@ function bacaItems(fd: FormData) {
   const kuantitas = fd.getAll("item_kuantitas").map(String);
   const satuan = fd.getAll("item_satuan").map(String);
   const hari = fd.getAll("item_hari").map(String);
+  const waktu = fd.getAll("item_waktu").map(String);
   const modal = fd.getAll("item_modal").map(String);
   const jual = fd.getAll("item_jual").map(String);
+  const keterangan = fd.getAll("item_keterangan").map(String);
 
   return nama
     .map((n, i) => ({
@@ -47,8 +49,10 @@ function bacaItems(fd: FormData) {
       kuantitas: Number(String(kuantitas[i] ?? "1").replace(",", ".")) || 0,
       satuan: (satuan[i] ?? "").trim() || undefined,
       hari: Number(String(hari[i] ?? "1").replace(",", ".")) || 0,
+      waktu: Number(String(waktu[i] ?? "1").replace(",", ".")) || 0,
       harga_modal: Number((modal[i] ?? "0").replace(/[^\d]/g, "")),
       harga_jual: Number((jual[i] ?? "0").replace(/[^\d]/g, "")),
+      keterangan: (keterangan[i] ?? "").trim() || undefined,
     }))
     .filter((it) => it.nama !== "");
 }

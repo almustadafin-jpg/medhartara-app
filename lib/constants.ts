@@ -108,3 +108,19 @@ export const KATEGORI_ITEM = [
   'Perizinan',
   'Lain-lain',
 ] as const
+
+/** Pilihan satuan baris BOQ — dropdown pada form. */
+export const SATUAN_ITEM = [
+  'Paket',
+  'Pcs',
+  'Unit',
+  'Set',
+  'Orang',
+  'Kegiatan',
+  'Hari',
+  'Titik',
+  'Meter',
+  'Roll',
+  'Lembar',
+  'Ls',
+] as const

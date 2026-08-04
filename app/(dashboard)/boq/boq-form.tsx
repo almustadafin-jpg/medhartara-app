@@ -6,19 +6,21 @@ import { simpanBoq, type FormState } from "./actions";
 import { Field, Input, Textarea, Select } from "@/components/ui/field";
 import { Button, TombolSimpan } from "@/components/ui/button";
 import { formatIDR } from "@/lib/format";
-import { KATEGORI_ITEM } from "@/lib/constants";
+import { KATEGORI_ITEM, SATUAN_ITEM } from "@/lib/constants";
 import type { Boq, BoqItem, Customer, Project, UserRole } from "@/types";
 
 /**
- * Editor BOQ dua tingkat.
+ * Editor BOQ — kategori besar + baris item sederhana.
  *
- * Tingkat atas: KATEGORI BESAR (mis. "Set & Properti", "Rental Equipment").
- * Tingkat bawah: ITEM di dalam kategori itu (panggung, gate, dekorasi…).
+ * Tingkat atas: KATEGORI BESAR (mis. "Set & Properti", "Equipment Rent").
+ * Tingkat bawah: baris item dengan kolom ringkas:
+ *   Description · (detail spesifikasi) · QTY · Satuan · Days · Time · Rate · Total · Keterangan
  *
- * Struktur ini murni soal tampilan & penyusunan. Saat disimpan, tiap item
- * tetap memancarkan pasangan field `item_*` berurutan — dengan `item_kategori`
- * mengikuti kategori grupnya — sehingga server action & basis data tidak
- * berubah: keduanya membaca daftar item yang sama seperti sebelumnya.
+ * Total baris = QTY × Days × Time × Rate.
+ *
+ * Harga MODAL disembunyikan secara default. Admin/Finance bisa menyalakan
+ * kolom modal (untuk hitung margin) lewat sakelar. Project Manager mengisi
+ * kolom Rate sebagai harga modal — harga jual ditentukan Admin/Finance.
  */
 
 interface Baris {
@@ -28,8 +30,10 @@ interface Baris {
   kuantitas: string;
   satuan: string;
   hari: string;
+  waktu: string;
   modal: string;
   jual: string;
+  keterangan: string;
 }
 
 interface Grup {
@@ -43,10 +47,12 @@ const barisKosong = (): Baris => ({
   nama: "",
   deskripsi: "",
   kuantitas: "1",
-  satuan: "unit",
+  satuan: "Paket",
   hari: "1",
+  waktu: "1",
   modal: "",
   jual: "",
+  keterangan: "",
 });
 
 const grupKosong = (kategori = ""): Grup => ({
@@ -66,10 +72,12 @@ function kelompokkan(itemAwal: BoqItem[]): Grup[] {
       nama: it.nama,
       deskripsi: it.deskripsi ?? "",
       kuantitas: String(it.kuantitas),
-      satuan: it.satuan ?? "",
+      satuan: it.satuan ?? "Paket",
       hari: String(it.hari),
+      waktu: String(it.waktu ?? 1),
       modal: String(it.harga_modal),
       jual: String(it.harga_jual),
+      keterangan: it.keterangan ?? "",
     });
   }
   return [...peta.values()];
@@ -94,14 +102,17 @@ export default function BoqForm({
   // ke pelanggan) ditentukan Admin/Finance saat menyusun penawaran.
   const hanyaModal = peran === "pm";
 
+  // Admin/Finance: kolom modal disembunyikan sampai sakelar dinyalakan.
+  const [tampilModal, setTampilModal] = useState(false);
+
   const [grup, setGrup] = useState<Grup[]>(
     itemAwal?.length ? kelompokkan(itemAwal) : [grupKosong(KATEGORI_ITEM[0])],
   );
 
   // Terima koma maupun titik sebagai pemisah desimal (mis. "1,5" hari).
   const n = (v: string) => Number(v.replace(",", ".").replace(/[^\d.]/g, "")) || 0;
-  const barisModal = (b: Baris) => n(b.kuantitas) * n(b.hari) * n(b.modal);
-  const barisJual = (b: Baris) => n(b.kuantitas) * n(b.hari) * n(b.jual);
+  const barisModal = (b: Baris) => n(b.kuantitas) * n(b.hari) * n(b.waktu) * n(b.modal);
+  const barisJual = (b: Baris) => n(b.kuantitas) * n(b.hari) * n(b.waktu) * n(b.jual);
   const grupModal = (g: Grup) => g.items.reduce((s, b) => s + barisModal(b), 0);
   const grupJual = (g: Grup) => g.items.reduce((s, b) => s + barisJual(b), 0);
 
@@ -109,6 +120,10 @@ export default function BoqForm({
   const totalJual = grup.reduce((s, g) => s + grupJual(g), 0);
   const margin = totalJual - totalModal;
   const persenMargin = totalJual > 0 ? (margin / totalJual) * 100 : 0;
+
+  // Kolom Rate mewakili modal untuk PM, jual untuk Admin/Finance.
+  const barisRate = (b: Baris) => (hanyaModal ? barisModal(b) : barisJual(b));
+  const grupRate = (g: Grup) => (hanyaModal ? grupModal(g) : grupJual(g));
 
   // ---- perubahan state ----
   const ubahKategori = (gk: string, nilai: string) =>
@@ -204,15 +219,13 @@ export default function BoqForm({
         </div>
       </section>
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold text-slate-700">Rincian per Kategori</h2>
           <p className="text-xs text-slate-500">
-            Susun per kategori besar — mis. Set &amp; Properti, Rental Equipment — lalu isi
-            item di dalamnya.
-            {hanyaModal
-              ? " Isi harga modal (biaya ke vendor). Harga jual ditentukan Admin/Finance."
-              : " Harga modal biaya ke vendor; harga jual yang ditagihkan."}
+            Susun per kategori besar — mis. Set &amp; Properti, Equipment Rent — lalu isi item di
+            dalamnya. Total baris = QTY × Days × Time × Rate.
+            {hanyaModal ? " Isi Rate sebagai harga modal (biaya ke vendor)." : ""}
           </p>
         </div>
         <Button type="button" onClick={tambahGrup}>
@@ -220,6 +233,18 @@ export default function BoqForm({
           Tambah Kategori
         </Button>
       </div>
+
+      {!hanyaModal && (
+        <label className="flex items-center gap-2 text-xs text-slate-600">
+          <input
+            type="checkbox"
+            checked={tampilModal}
+            onChange={(ev) => setTampilModal(ev.target.checked)}
+            className="h-4 w-4 rounded border-slate-300"
+          />
+          Tampilkan kolom Harga Modal (untuk hitung margin &amp; profit) — opsional
+        </label>
+      )}
 
       {e.items && <p className="text-xs text-red-600">{e.items}</p>}
 
@@ -236,10 +261,7 @@ export default function BoqForm({
                 className="w-full max-w-md rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:border-slate-900"
               />
               <span className="ml-auto whitespace-nowrap text-xs text-slate-500">
-                {hanyaModal ? "Subtotal modal " : "Subtotal jual "}
-                <b className="text-slate-900">
-                  {formatIDR(hanyaModal ? grupModal(g) : grupJual(g))}
-                </b>
+                Subtotal <b className="text-slate-900">{formatIDR(grupRate(g))}</b>
               </span>
               <button
                 type="button"
@@ -254,7 +276,7 @@ export default function BoqForm({
 
             {/* Item dalam kategori */}
             <div className="space-y-3 p-4">
-              {g.items.map((b) => {
+              {g.items.map((b, iBaris) => {
                 indeksRata += 1;
                 const errBaris = !!e[`items.${indeksRata}`];
                 return (
@@ -262,12 +284,15 @@ export default function BoqForm({
                     {/* Tiap item memancarkan kategori grupnya — server tak berubah. */}
                     <input type="hidden" name="item_kategori" value={g.kategori} />
 
-                    <div className="mb-2 flex gap-2">
+                    <div className="mb-2 flex items-center gap-2">
+                      <span className="w-6 shrink-0 text-center text-xs font-semibold text-slate-400">
+                        {iBaris + 1}
+                      </span>
                       <Input
                         name="item_nama"
                         value={b.nama}
                         onChange={(ev) => ubahItem(g.kunci, b.kunci, "nama", ev.target.value)}
-                        placeholder="Nama item — mis. Panggung, Gate, Dekorasi"
+                        placeholder="Description — mis. Panggung utama, Sound system, Operator"
                         error={errBaris}
                       />
                       <button
@@ -285,12 +310,15 @@ export default function BoqForm({
                       name="item_deskripsi"
                       value={b.deskripsi}
                       onChange={(ev) => ubahItem(g.kunci, b.kunci, "deskripsi", ev.target.value)}
-                      placeholder="Spesifikasi — mis. ukuran 6×4 m, rangka besi, karpet"
-                      className="mb-2"
+                      placeholder="Detail spesifikasi — mis. ukuran 6×4 m, rangka besi, karpet"
+                      className="mb-2 ml-8"
                     />
 
-                    <div className="grid gap-2 sm:grid-cols-12">
+                    <div className="ml-8 grid gap-2 sm:grid-cols-12">
                       <div className="sm:col-span-2">
+                        <label className="mb-1 block text-[10px] uppercase tracking-wide text-slate-400">
+                          QTY
+                        </label>
                         <Input
                           name="item_kuantitas"
                           inputMode="decimal"
@@ -300,14 +328,25 @@ export default function BoqForm({
                         />
                       </div>
                       <div className="sm:col-span-2">
-                        <Input
+                        <label className="mb-1 block text-[10px] uppercase tracking-wide text-slate-400">
+                          Satuan
+                        </label>
+                        <Select
                           name="item_satuan"
                           value={b.satuan}
                           onChange={(ev) => ubahItem(g.kunci, b.kunci, "satuan", ev.target.value)}
-                          placeholder="Satuan"
-                        />
+                        >
+                          {SATUAN_ITEM.map((sat) => (
+                            <option key={sat} value={sat}>
+                              {sat}
+                            </option>
+                          ))}
+                        </Select>
                       </div>
                       <div className="sm:col-span-2">
+                        <label className="mb-1 block text-[10px] uppercase tracking-wide text-slate-400">
+                          Days
+                        </label>
                         <Input
                           name="item_hari"
                           inputMode="decimal"
@@ -316,51 +355,74 @@ export default function BoqForm({
                           placeholder="Hari (mis. 1,5)"
                         />
                       </div>
-                      <div className={hanyaModal ? "sm:col-span-6" : "sm:col-span-3"}>
+                      <div className="sm:col-span-2">
+                        <label className="mb-1 block text-[10px] uppercase tracking-wide text-slate-400">
+                          Time
+                        </label>
                         <Input
-                          name="item_modal"
-                          inputMode="numeric"
-                          value={b.modal}
-                          onChange={(ev) => ubahItem(g.kunci, b.kunci, "modal", ev.target.value)}
-                          placeholder="Harga modal"
+                          name="item_waktu"
+                          inputMode="decimal"
+                          value={b.waktu}
+                          onChange={(ev) => ubahItem(g.kunci, b.kunci, "waktu", ev.target.value)}
+                          placeholder="Kali/sesi"
                         />
                       </div>
-                      {hanyaModal ? (
-                        // Harga jual tetap dikirim (kosong → 0) agar server
-                        // membaca deretan field item yang sama seperti biasa.
-                        <input type="hidden" name="item_jual" value={b.jual} />
-                      ) : (
-                        <div className="sm:col-span-3">
+                      <div className={tampilModal ? "sm:col-span-2" : "sm:col-span-4"}>
+                        <label className="mb-1 block text-[10px] uppercase tracking-wide text-slate-400">
+                          {hanyaModal ? "Rate (modal)" : "Rate"}
+                        </label>
+                        <Input
+                          name={hanyaModal ? "item_modal" : "item_jual"}
+                          inputMode="numeric"
+                          value={hanyaModal ? b.modal : b.jual}
+                          onChange={(ev) =>
+                            ubahItem(g.kunci, b.kunci, hanyaModal ? "modal" : "jual", ev.target.value)
+                          }
+                          placeholder="Harga satuan"
+                        />
+                      </div>
+                      {!hanyaModal && tampilModal && (
+                        <div className="sm:col-span-2">
+                          <label className="mb-1 block text-[10px] uppercase tracking-wide text-slate-400">
+                            Modal
+                          </label>
                           <Input
-                            name="item_jual"
+                            name="item_modal"
                             inputMode="numeric"
-                            value={b.jual}
-                            onChange={(ev) => ubahItem(g.kunci, b.kunci, "jual", ev.target.value)}
-                            placeholder="Harga jual"
+                            value={b.modal}
+                            onChange={(ev) => ubahItem(g.kunci, b.kunci, "modal", ev.target.value)}
+                            placeholder="Harga modal"
                           />
                         </div>
                       )}
+
+                      {/* PM: harga jual tetap dikirim (kosong → 0). Admin tanpa
+                          sakelar: modal tetap dikirim (nilai tersembunyi). */}
+                      {hanyaModal && <input type="hidden" name="item_jual" value={b.jual} />}
+                      {!hanyaModal && !tampilModal && (
+                        <input type="hidden" name="item_modal" value={b.modal} />
+                      )}
                     </div>
 
-                    <div className="mt-2 flex flex-wrap justify-end gap-4 text-xs">
-                      <span className="text-slate-500">
-                        Modal <b className="text-slate-700">{formatIDR(barisModal(b))}</b>
+                    <div className="ml-8 mt-2 flex flex-wrap items-center gap-2">
+                      <Input
+                        name="item_keterangan"
+                        value={b.keterangan}
+                        onChange={(ev) => ubahItem(g.kunci, b.kunci, "keterangan", ev.target.value)}
+                        placeholder="Keterangan (opsional)"
+                        className="flex-1"
+                      />
+                      <span className="whitespace-nowrap text-xs text-slate-500">
+                        Total <b className="text-slate-900">{formatIDR(barisRate(b))}</b>
                       </span>
-                      {!hanyaModal && (
-                        <>
-                          <span className="text-slate-500">
-                            Jual <b className="text-slate-900">{formatIDR(barisJual(b))}</b>
-                          </span>
-                          <span
-                            className={
-                              barisJual(b) - barisModal(b) >= 0
-                                ? "text-emerald-700"
-                                : "text-red-600"
-                            }
-                          >
-                            Margin <b>{formatIDR(barisJual(b) - barisModal(b))}</b>
-                          </span>
-                        </>
+                      {!hanyaModal && tampilModal && (
+                        <span
+                          className={`whitespace-nowrap text-xs ${
+                            barisJual(b) - barisModal(b) >= 0 ? "text-emerald-700" : "text-red-600"
+                          }`}
+                        >
+                          Margin <b>{formatIDR(barisJual(b) - barisModal(b))}</b>
+                        </span>
                       )}
                     </div>
                   </div>
@@ -389,31 +451,36 @@ export default function BoqForm({
           </Field>
 
           <dl className="space-y-2 self-start rounded-lg bg-slate-50 p-4 text-sm">
-            <div
-              className={`flex justify-between ${
-                hanyaModal ? "border-t-0 pt-0 text-base font-semibold" : ""
-              }`}
-            >
-              <dt className="text-slate-500">Total modal</dt>
-              <dd className={hanyaModal ? "text-slate-900" : ""}>{formatIDR(totalModal)}</dd>
-            </div>
-            {!hanyaModal && (
+            {hanyaModal ? (
+              <div className="flex justify-between text-base font-semibold">
+                <dt className="text-slate-500">Total modal</dt>
+                <dd className="text-slate-900">{formatIDR(totalModal)}</dd>
+              </div>
+            ) : (
               <>
-                <div className="flex justify-between">
-                  <dt className="text-slate-500">Total jual</dt>
-                  <dd className="font-medium">{formatIDR(totalJual)}</dd>
+                <div className="flex justify-between text-base font-semibold">
+                  <dt className="text-slate-500">Total</dt>
+                  <dd>{formatIDR(totalJual)}</dd>
                 </div>
-                <div
-                  className={`flex justify-between border-t border-slate-200 pt-2 text-base font-semibold ${
-                    margin >= 0 ? "text-emerald-700" : "text-red-600"
-                  }`}
-                >
-                  <dt>Margin</dt>
-                  <dd>{formatIDR(margin)}</dd>
-                </div>
-                <p className="text-xs text-slate-400">
-                  {persenMargin.toFixed(1)}% dari harga jual. Angka final dihitung ulang database.
-                </p>
+                {tampilModal && (
+                  <>
+                    <div className="flex justify-between">
+                      <dt className="text-slate-500">Total modal</dt>
+                      <dd>{formatIDR(totalModal)}</dd>
+                    </div>
+                    <div
+                      className={`flex justify-between border-t border-slate-200 pt-2 font-semibold ${
+                        margin >= 0 ? "text-emerald-700" : "text-red-600"
+                      }`}
+                    >
+                      <dt>Margin</dt>
+                      <dd>{formatIDR(margin)}</dd>
+                    </div>
+                    <p className="text-xs text-slate-400">
+                      {persenMargin.toFixed(1)}% dari harga jual. Angka final dihitung ulang database.
+                    </p>
+                  </>
+                )}
               </>
             )}
             {hanyaModal && (

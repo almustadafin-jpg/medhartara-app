@@ -66,11 +66,13 @@ const s = StyleSheet.create({
   },
 
   cNo: { width: 20, textAlign: "center" },
-  cItem: { flex: 5 },
+  cItem: { flex: 4.4 },
   cQty: { flex: 0.9, textAlign: "right" },
   cSat: { flex: 1.1, textAlign: "center", color: warna.redup },
   cHari: { flex: 0.8, textAlign: "right" },
+  cWaktu: { flex: 0.8, textAlign: "right" },
   cAngka: { flex: 2, textAlign: "right" },
+  cKet: { flex: 2.4, color: warna.redup, paddingLeft: 4 },
 
   ringkas: {
     marginTop: 10, alignSelf: "flex-end", flexDirection: "row",
@@ -101,8 +103,10 @@ export interface BarisBoqPDF {
   kuantitas: number;
   satuan: string | null;
   hari: number;
+  waktu: number;
   harga_modal: number;
   harga_jual: number;
+  keterangan: string | null;
   subtotal_modal: number;
   subtotal_jual: number;
 }
@@ -132,6 +136,8 @@ export function BoqPDF({ data }: { data: DataBoqPDF }) {
   const internal = data.versi === "internal";
   const adaLogo = Boolean(data.perusahaan.logo_url);
   const adaHari = data.items.some((it) => Number(it.hari) !== 1);
+  const adaWaktu = data.items.some((it) => Number(it.waktu) !== 1);
+  const adaKet = data.items.some((it) => (it.keterangan ?? "").trim() !== "");
   const margin = data.total_jual - data.total_modal;
   const kontak = [data.perusahaan.telepon, data.perusahaan.email].filter(Boolean).join("  ·  ");
 
@@ -182,14 +188,16 @@ export function BoqPDF({ data }: { data: DataBoqPDF }) {
 
         <View style={s.thead} fixed>
           <Text style={[s.th, s.cNo]}>NO</Text>
-          <Text style={[s.th, s.cItem]}>URAIAN PEKERJAAN</Text>
-          <Text style={[s.th, s.cQty]}>VOL</Text>
+          <Text style={[s.th, s.cItem]}>DESCRIPTION</Text>
+          <Text style={[s.th, s.cQty]}>QTY</Text>
           <Text style={[s.th, s.cSat, { color: "#ffffff" }]}>SAT</Text>
-          {adaHari && <Text style={[s.th, s.cHari]}>HARI</Text>}
+          {adaHari && <Text style={[s.th, s.cHari]}>DAYS</Text>}
+          {adaWaktu && <Text style={[s.th, s.cWaktu]}>TIME</Text>}
           {internal && <Text style={[s.th, s.cAngka]}>HARGA MODAL</Text>}
           {internal && <Text style={[s.th, s.cAngka]}>JUMLAH MODAL</Text>}
           <Text style={[s.th, s.cAngka]}>{internal ? "HARGA JUAL" : "HARGA"}</Text>
           <Text style={[s.th, s.cAngka]}>{internal ? "JUMLAH JUAL" : "JUMLAH"}</Text>
+          {adaKet && <Text style={[s.th, s.cKet, { color: "#ffffff" }]}>KETERANGAN</Text>}
         </View>
 
         {kelompok.map((g) => {
@@ -215,6 +223,9 @@ export function BoqPDF({ data }: { data: DataBoqPDF }) {
                     {adaHari && (
                       <Text style={s.cHari}>{String(Number(it.hari)).replace(".", ",")}</Text>
                     )}
+                    {adaWaktu && (
+                      <Text style={s.cWaktu}>{String(Number(it.waktu)).replace(".", ",")}</Text>
+                    )}
                     {internal && (
                       <Text style={[s.cAngka, { color: warna.redup }]}>{formatIDR(it.harga_modal)}</Text>
                     )}
@@ -225,6 +236,7 @@ export function BoqPDF({ data }: { data: DataBoqPDF }) {
                     <Text style={[s.cAngka, { fontFamily: "Helvetica-Bold" }]}>
                       {formatIDR(it.subtotal_jual)}
                     </Text>
+                    {adaKet && <Text style={s.cKet}>{it.keterangan ?? ""}</Text>}
                   </View>
                 );
               })}
@@ -237,6 +249,7 @@ export function BoqPDF({ data }: { data: DataBoqPDF }) {
                 <Text style={s.cQty} />
                 <Text style={s.cSat} />
                 {adaHari && <Text style={s.cHari} />}
+                {adaWaktu && <Text style={s.cWaktu} />}
                 {internal && <Text style={s.cAngka} />}
                 {internal && (
                   <Text style={[s.cAngka, { fontFamily: "Helvetica-Bold", color: warna.redup }]}>
@@ -245,6 +258,7 @@ export function BoqPDF({ data }: { data: DataBoqPDF }) {
                 )}
                 <Text style={s.cAngka} />
                 <Text style={[s.cAngka, { fontFamily: "Helvetica-Bold" }]}>{formatIDR(subJual)}</Text>
+                {adaKet && <Text style={s.cKet} />}
               </View>
             </View>
           );

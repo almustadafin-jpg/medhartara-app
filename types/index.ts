@@ -213,8 +213,10 @@ export interface BoqItem {
   kuantitas: number;
   satuan: string | null;
   hari: number;
+  waktu: number;
   harga_modal: number;
   harga_jual: number;
+  keterangan: string | null;
   subtotal_modal: number;
   subtotal_jual: number;
   urutan: number;

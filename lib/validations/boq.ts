@@ -17,8 +17,15 @@ export const skemaItemBoq = z.object({
   kuantitas: z.number().positive("Kuantitas harus lebih dari 0"),
   satuan: z.string().trim().max(20).optional(),
   hari: z.number().positive("Hari harus lebih dari 0"),
+  waktu: z.number().positive("Time harus lebih dari 0"),
   harga_modal: z.number().min(0, "Harga modal tidak boleh negatif"),
   harga_jual: z.number().min(0, "Harga jual tidak boleh negatif"),
+  keterangan: z
+    .string()
+    .trim()
+    .max(200)
+    .optional()
+    .transform((v) => (v === "" ? undefined : v)),
 });
 
 export const skemaBoq = z.object({
