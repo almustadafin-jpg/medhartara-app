@@ -84,7 +84,10 @@ export async function GET(
       penyetuju && q.disetujui_pada
         ? { oleh: penyetuju.nama_lengkap, pada: q.disetujui_pada }
         : null,
-    penandaTangan: { nama: q.ttd_nama, jabatan: q.ttd_jabatan },
+    penandaTangan: {
+      nama: q.ttd_nama || perusahaan?.nama || "Medhartara Production",
+      jabatan: q.ttd_jabatan || "Direktur",
+    },
   };
 
   const berkas = await renderToBuffer(DokumenPDF({ data }));
