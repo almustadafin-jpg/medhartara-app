@@ -8,6 +8,7 @@ import { Tabel, Thead, Th, Td, Tr } from "@/components/ui/table";
 import { STATUS_PENAWARAN } from "@/lib/status";
 import { formatIDR, formatTanggal, formatWaktu } from "@/lib/format";
 import { hitungPPN, labelPPN } from "@/lib/pajak";
+import { rentangJadwal } from "@/lib/jadwal";
 import AksiPenawaran from "./aksi-penawaran";
 import HapusPenawaran from "./hapus-penawaran";
 import type { Quotation, QuotationItem, Customer, Project, Company, UsersProfile } from "@/types";
@@ -129,6 +130,17 @@ export default async function DetailPenawaranPage({
             {proyek && (
               <p>
                 <span className="text-slate-400">Proyek:</span> {(proyek as Project).nama}
+              </p>
+            )}
+            {proyek && rentangJadwal((proyek as Project).tanggal_mulai, (proyek as Project).tanggal_selesai) && (
+              <p>
+                <span className="text-slate-400">Pelaksanaan:</span>{" "}
+                {rentangJadwal((proyek as Project).tanggal_mulai, (proyek as Project).tanggal_selesai)}
+              </p>
+            )}
+            {proyek && (proyek as Project).lokasi && (
+              <p>
+                <span className="text-slate-400">Lokasi:</span> {(proyek as Project).lokasi}
               </p>
             )}
           </div>

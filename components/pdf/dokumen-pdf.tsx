@@ -260,9 +260,15 @@ export function DokumenPDF({ data }: { data: DataDokumenPDF }) {
             <Text style={s.redup}>
               {data.tanggalKeduaLabel}: {formatTanggal(data.tanggalKedua)}
             </Text>
-            {/* Nama proyek tidak dicetak di invoice; tetap tampil di penawaran. */}
+            {/* Detail proyek tidak dicetak di invoice; tetap tampil di penawaran. */}
             {!adalahInvoice && data.proyek && (
               <Text style={s.redup}>Proyek: {data.proyek}</Text>
+            )}
+            {!adalahInvoice && data.jadwal && (
+              <Text style={s.redup}>Pelaksanaan: {data.jadwal}</Text>
+            )}
+            {!adalahInvoice && data.lokasi && (
+              <Text style={s.redup}>Lokasi: {data.lokasi}</Text>
             )}
           </View>
         </View>

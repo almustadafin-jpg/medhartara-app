@@ -21,17 +21,29 @@ export type FormState = {
  * harga jualnya — bukan rincian item. Hanya menghitung BOQ berstatus
  * disetujui milik proyek tersebut. Harga modal tidak pernah ikut.
  */
+/**
+ * Ringkasan RAB proyek untuk penawaran: satu baris.
+ * deskripsi = nama proyek, total = jumlah total_jual seluruh RAB/BOQ
+ * berstatus disetujui pada proyek itu.
+ */
 export async function ringkasanRabProyek(
   projectId: string,
-): Promise<{ error?: string; items?: { kategori: string; total: number }[] }> {
+): Promise<{ error?: string; nama?: string; total?: number }> {
   const profil = await wajibLogin();
   if (!boleh(profil.role, "kelolaPenawaran")) return { error: "Tanpa izin." };
   if (!projectId) return { error: "Pilih proyek terlebih dahulu." };
 
   const supabase = await createClient();
+
+  const { data: proyek } = await supabase
+    .from("projects")
+    .select("nama")
+    .eq("id", projectId)
+    .maybeSingle();
+
   const { data: boqs } = await supabase
     .from("boq")
-    .select("id")
+    .select("total_jual")
     .eq("project_id", projectId)
     .eq("status", "disetujui");
 
@@ -39,23 +51,10 @@ export async function ringkasanRabProyek(
     return { error: "Proyek ini belum memiliki RAB yang disetujui." };
   }
 
-  const { data: items } = await supabase
-    .from("boq_items")
-    .select("kategori, subtotal_jual")
-    .in("boq_id", boqs.map((b) => b.id));
+  const total = boqs.reduce((s, b) => s + Number(b.total_jual), 0);
+  if (total <= 0) return { error: "RAB proyek belum memiliki nilai jual." };
 
-  const peta = new Map<string, number>();
-  for (const it of items ?? []) {
-    const k = (it.kategori ?? "Lain-lain").trim() || "Lain-lain";
-    peta.set(k, (peta.get(k) ?? 0) + Number(it.subtotal_jual));
-  }
-
-  const out = [...peta.entries()]
-    .map(([kategori, total]) => ({ kategori, total }))
-    .filter((x) => x.total > 0);
-
-  if (!out.length) return { error: "RAB proyek belum memiliki nilai jual." };
-  return { items: out };
+  return { nama: proyek?.nama ?? "Proyek", total };
 }
 
 function petakan(issues: { path: (string | number)[]; message: string }[]) {

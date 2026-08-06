@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
-import { Trash2, Plus, Download } from "lucide-react";
+import { Trash2, Plus } from "lucide-react";
 import { simpanPenawaran, ringkasanRabProyek, type FormState } from "./actions";
 import { Field, Input, Textarea, Select } from "@/components/ui/field";
 import { Button, TombolSimpan } from "@/components/ui/button";
@@ -59,30 +59,33 @@ export default function PenawaranForm({
   const [projectId, setProjectId] = useState(penawaran?.project_id ?? "");
   const [narikRab, mulaiNarik] = useTransition();
 
-  /** Tarik RAB proyek terpilih → satu baris per kategori besar. */
-  function tarikRab() {
-    if (!projectId) {
-      window.alert("Pilih proyek dulu untuk menarik RAB-nya.");
-      return;
-    }
+  /**
+   * Pilih proyek → penawaran otomatis terisi SATU baris:
+   * deskripsi = nama proyek, harga = total final seluruh RAB disetujui proyek.
+   */
+  function pilihProyek(id: string) {
+    setProjectId(id);
+    if (!id) return;
+
     const adaIsi = items.some((it) => it.deskripsi.trim() || angka(it.harga) > 0);
-    if (adaIsi && !window.confirm("Item yang ada akan diganti dengan ringkasan RAB. Lanjutkan?")) {
+    if (adaIsi && !window.confirm("Item yang ada akan diganti dengan ringkasan proyek. Lanjutkan?")) {
       return;
     }
     mulaiNarik(async () => {
-      const hasil = await ringkasanRabProyek(projectId);
+      const hasil = await ringkasanRabProyek(id);
       if (hasil.error) {
         window.alert(hasil.error);
         return;
       }
-      const baris: BarisItem[] = (hasil.items ?? []).map((it) => ({
-        kunci: crypto.randomUUID(),
-        deskripsi: it.kategori,
-        kuantitas: "1",
-        satuan: "paket",
-        harga: String(it.total),
-      }));
-      if (baris.length) setItems(baris);
+      setItems([
+        {
+          kunci: crypto.randomUUID(),
+          deskripsi: hasil.nama ?? "",
+          kuantitas: "1",
+          satuan: "paket",
+          harga: String(hasil.total ?? 0),
+        },
+      ]);
     });
   }
 
@@ -162,33 +165,26 @@ export default function PenawaranForm({
             label="Proyek"
             name="project_id"
             error={e.project_id}
-            petunjuk="Pilih proyek lalu klik Tarik RAB untuk mengisi item otomatis"
+            petunjuk={
+              narikRab
+                ? "Mengambil total RAB proyek…"
+                : "Pilih proyek — item otomatis terisi nama proyek + total RAB disetujui"
+            }
           >
-            <div className="flex gap-2">
-              <Select
-                id="project_id"
-                name="project_id"
-                value={projectId}
-                onChange={(ev) => setProjectId(ev.target.value)}
-              >
-                <option value="">— Tanpa proyek —</option>
-                {proyek.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nama}
-                  </option>
-                ))}
-              </Select>
-              <Button
-                type="button"
-                varian="sekunder"
-                onClick={tarikRab}
-                disabled={!projectId || narikRab}
-                className="shrink-0 whitespace-nowrap"
-              >
-                <Download className="h-4 w-4" />
-                {narikRab ? "Menarik…" : "Tarik RAB"}
-              </Button>
-            </div>
+            <Select
+              id="project_id"
+              name="project_id"
+              value={projectId}
+              onChange={(ev) => pilihProyek(ev.target.value)}
+              disabled={narikRab}
+            >
+              <option value="">— Tanpa proyek —</option>
+              {proyek.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nama}
+                </option>
+              ))}
+            </Select>
           </Field>
 
           <Field label="Tanggal" name="tanggal" wajib error={e.tanggal}>
