@@ -232,7 +232,6 @@ export function DokumenPDF({ data }: { data: DataDokumenPDF }) {
               {adalahInvoice ? "INVOICE" : "PENAWARAN HARGA"}
             </Text>
             <Text style={s.nomor}>{data.nomor}</Text>
-            <Text style={s.status}>{data.statusLabel}</Text>
           </View>
         </View>
 
@@ -380,12 +379,6 @@ export function DokumenPDF({ data }: { data: DataDokumenPDF }) {
               </>
             )}
 
-            {data.ditandatangani && (
-              <Text style={[s.redup, { marginTop: adalahInvoice ? 10 : 0 }]}>
-                Disetujui oleh {data.ditandatangani.oleh} pada{" "}
-                {formatTanggal(data.ditandatangani.pada)}
-              </Text>
-            )}
           </View>
 
           {data.penandaTangan?.nama && (
