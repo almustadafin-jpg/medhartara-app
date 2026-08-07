@@ -190,7 +190,7 @@ export async function hapusInvoice(id: string) {
   if (error) return { error: pesanGagalHapus(error.code, error.message, "Invoice") };
   if (!count) {
     return {
-      error: pesanTakTerhapus("Invoice", "Hanya invoice draft tanpa pembayaran yang dapat dihapus."),
+      error: pesanTakTerhapus("Invoice", "Hanya invoice draft atau batal tanpa pembayaran yang dapat dihapus."),
     };
   }
 

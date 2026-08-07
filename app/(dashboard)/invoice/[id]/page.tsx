@@ -273,7 +273,7 @@ export default async function DetailInvoicePage({
             {pt?.bank_nama &&
               `Pembayaran: ${pt.bank_nama} ${pt.bank_rekening} a.n. ${pt.bank_atas_nama}`}
           </p>
-          {inv.status === "draft" && bisaKelola && daftarBayar.length === 0 && (
+          {["draft", "batal"].includes(inv.status) && bisaKelola && daftarBayar.length === 0 && (
             <HapusInvoice id={inv.id} nomor={inv.nomor} />
           )}
 
