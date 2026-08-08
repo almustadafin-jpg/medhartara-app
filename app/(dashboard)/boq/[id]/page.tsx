@@ -54,11 +54,13 @@ export default async function DetailBoqPage({ params }: { params: Promise<{ id: 
 
   const adaHari = daftar.some((it) => Number(it.hari) !== 1);
   const adaWaktu = daftar.some((it) => Number(it.waktu) !== 1);
+  // Admin/Finance & Direktur bebas mengubah/menghapus BOQ di status apa pun.
+  const penuhBOQ = ["direktur", "admin_finance"].includes(profil.role);
   const bisaUbah =
-    boleh(profil.role, "kelolaBOQ") && ["draft", "ditolak", "diajukan"].includes(b.status);
-  // Hapus tetap terbatas draft/ditolak (sesuai kebijakan DELETE di database).
+    boleh(profil.role, "kelolaBOQ") &&
+    (penuhBOQ || ["draft", "ditolak", "diajukan"].includes(b.status));
   const bisaHapus =
-    boleh(profil.role, "kelolaBOQ") && ["draft", "ditolak"].includes(b.status);
+    boleh(profil.role, "kelolaBOQ") && (penuhBOQ || ["draft", "ditolak"].includes(b.status));
   // PM hanya berurusan dengan harga modal; jual & margin disembunyikan.
   const tampilJual = profil.role !== "pm";
 

@@ -111,7 +111,7 @@ export async function simpanPenawaran(_prev: FormState, fd: FormData): Promise<F
   let quotationId = id;
 
   if (id) {
-    // Hanya draft yang boleh disunting — RLS & trigger DB juga menegakkan ini.
+    // Admin/Finance boleh menyunting di status apa pun (RLS DB menegakkan izin).
     const { data: lama } = await supabase
       .from("quotations")
       .select("status")
@@ -119,12 +119,9 @@ export async function simpanPenawaran(_prev: FormState, fd: FormData): Promise<F
       .maybeSingle();
 
     if (!lama) return { error: "Penawaran tidak ditemukan." };
-    if (lama.status !== "draft") {
-      return { error: `Penawaran berstatus ${lama.status} tidak dapat diubah.` };
-    }
 
     const { error } = await supabase.from("quotations").update(induk).eq("id", id);
-    if (error) return { error: "Gagal menyimpan penawaran." };
+    if (error) return { error: "Gagal menyimpan penawaran. " + error.message.replace(/^.*?:\s*/, "") };
 
     await supabase.from("quotation_items").delete().eq("quotation_id", id);
   } else {
@@ -227,7 +224,7 @@ export async function hapusPenawaran(id: string) {
   if (error) return { error: pesanGagalHapus(error.code, error.message, "Penawaran") };
   if (!count) {
     return {
-      error: pesanTakTerhapus("Penawaran", "Hanya penawaran berstatus draft yang dapat dihapus."),
+      error: pesanTakTerhapus("Penawaran", "Penawaran ini tidak dapat dihapus."),
     };
   }
 

@@ -80,7 +80,7 @@ export default async function DetailInvoicePage({
           ← Kembali ke daftar invoice
         </Link>
         <div className="flex items-center gap-4">
-          {inv.status === "draft" && bisaKelola && (
+          {bisaKelola && daftarBayar.length === 0 && (
             <Link href={`/invoice/${inv.id}/ubah`} className="text-sm text-slate-500 hover:text-slate-800">
               Ubah invoice
             </Link>
@@ -273,7 +273,7 @@ export default async function DetailInvoicePage({
             {pt?.bank_nama &&
               `Pembayaran: ${pt.bank_nama} ${pt.bank_rekening} a.n. ${pt.bank_atas_nama}`}
           </p>
-          {["draft", "batal"].includes(inv.status) && bisaKelola && daftarBayar.length === 0 && (
+          {bisaKelola && daftarBayar.length === 0 && (
             <HapusInvoice id={inv.id} nomor={inv.nomor} />
           )}
 

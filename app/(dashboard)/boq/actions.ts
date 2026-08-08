@@ -83,9 +83,6 @@ export async function simpanBoq(_prev: FormState, fd: FormData): Promise<FormSta
   if (id) {
     const { data: lama } = await supabase.from("boq").select("status").eq("id", id).maybeSingle();
     if (!lama) return { error: "BOQ tidak ditemukan." };
-    if (!["draft", "ditolak", "diajukan"].includes(lama.status)) {
-      return { error: `BOQ berstatus ${lama.status} tidak dapat diubah.` };
-    }
 
     // Menyunting BOQ yang sudah diajukan mengembalikannya ke draft,
     // supaya perubahan wajib diajukan & ditinjau ulang.

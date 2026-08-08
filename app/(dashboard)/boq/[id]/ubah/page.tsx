@@ -15,8 +15,11 @@ export default async function UbahBoqPage({ params }: { params: Promise<{ id: st
   if (!boq) notFound();
   const b = boq as Boq;
 
-  // BOQ disetujui/arsip terkunci; draft/ditolak/diajukan masih boleh disunting.
-  if (!["draft", "ditolak", "diajukan"].includes(b.status)) redirect(`/boq/${id}`);
+  // Admin/Finance & Direktur bebas menyunting di status apa pun; PM terbatas.
+  const penuhBOQ = ["direktur", "admin_finance"].includes(profil.role);
+  if (!penuhBOQ && !["draft", "ditolak", "diajukan"].includes(b.status)) {
+    redirect(`/boq/${id}`);
+  }
 
   const [{ data: items }, { data: pelanggan }, { data: proyek }] = await Promise.all([
     supabase.from("boq_items").select("*").eq("boq_id", id).order("urutan"),

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { wajibIzin } from "@/lib/auth/session";
 import { PageHeader } from "@/components/ui/page-header";
@@ -24,9 +24,6 @@ export default async function UbahPenawaranPage({
   if (!penawaran) notFound();
   const q = penawaran as Quotation;
 
-  // Hanya draft yang dapat disunting (§9.1).
-  if (q.status !== "draft") redirect(`/penawaran/${id}`);
-
   const [{ data: items }, { data: pelanggan }, { data: proyek }] = await Promise.all([
     supabase.from("quotation_items").select("*").eq("quotation_id", id).order("urutan"),
     supabase.from("customers").select("*").eq("aktif", true).order("nama"),
@@ -41,7 +38,7 @@ export default async function UbahPenawaranPage({
       >
         ← Kembali ke penawaran
       </Link>
-      <PageHeader judul={`Ubah ${q.nomor}`} deskripsi="Hanya penawaran berstatus draft yang dapat diubah" />
+      <PageHeader judul={`Ubah ${q.nomor}`} deskripsi="Menyunting penawaran (termasuk yang sudah disetujui)" />
       <PenawaranForm
         penawaran={q}
         itemAwal={(items as QuotationItem[]) ?? []}

@@ -24,8 +24,12 @@ export default async function UbahInvoicePage({
   if (!invoice) notFound();
   const inv = invoice as Invoice;
 
-  // Invoice yang sudah diterbitkan tidak boleh disunting (§9.2).
-  if (inv.status !== "draft") redirect(`/invoice/${id}`);
+  // Invoice yang sudah ada pembayaran terkunci (lindungi jejak kas).
+  const { count: jmlBayar } = await supabase
+    .from("payments")
+    .select("id", { count: "exact", head: true })
+    .eq("invoice_id", id);
+  if (jmlBayar && jmlBayar > 0) redirect(`/invoice/${id}`);
 
   const [{ data: items }, { data: pelanggan }, { data: proyek }] = await Promise.all([
     supabase.from("invoice_items").select("*").eq("invoice_id", id).order("urutan"),
@@ -43,7 +47,7 @@ export default async function UbahInvoicePage({
       </Link>
       <PageHeader
         judul={`Ubah ${inv.nomor}`}
-        deskripsi="Hanya invoice berstatus draft yang dapat diubah"
+        deskripsi="Menyunting invoice (kecuali yang sudah ada pembayaran)"
       />
       <InvoiceForm
         invoice={inv}

@@ -59,7 +59,7 @@ export default async function DetailPenawaranPage({
           ← Kembali ke daftar penawaran
         </Link>
         <div className="flex items-center gap-4">
-          {q.status === "draft" && boleh(profil.role, "kelolaPenawaran") && (
+          {boleh(profil.role, "kelolaPenawaran") && (
             <Link
               href={`/penawaran/${q.id}/ubah`}
               className="text-sm text-slate-500 hover:text-slate-800"
@@ -217,23 +217,17 @@ export default async function DetailPenawaranPage({
             )}
           </div>
 
-          {q.status === "draft" && boleh(profil.role, "kelolaPenawaran") && (
+          {boleh(profil.role, "kelolaPenawaran") && (
             <HapusPenawaran id={q.id} nomor={q.nomor} />
           )}
 
           <AksiPenawaran
             id={q.id}
             status={q.status}
-            bisaKelola={boleh(profil.role, "kelolaPenawaran")}
-            bisaSetujui={boleh(profil.role, "setujuiPenawaran")}
             bisaKonversi={boleh(profil.role, "kelolaInvoice")}
           />
         </footer>
       </article>
-
-      <p className="mt-4 text-xs text-slate-400">
-        Konversi ke invoice dan ekspor PDF menyusul di Fase 4 & 7.
-      </p>
     </div>
   );
 }

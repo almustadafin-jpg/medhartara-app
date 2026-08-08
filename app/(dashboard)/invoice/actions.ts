@@ -80,8 +80,14 @@ export async function simpanInvoice(_prev: FormState, fd: FormData): Promise<For
       .maybeSingle();
 
     if (!lama) return { error: "Invoice tidak ditemukan." };
-    if (lama.status !== "draft") {
-      return { error: `Invoice berstatus ${lama.status} tidak dapat diubah.` };
+
+    // Invoice yang sudah ada pembayaran tidak boleh diubah (lindungi jejak kas).
+    const { count: jmlBayar } = await supabase
+      .from("payments")
+      .select("id", { count: "exact", head: true })
+      .eq("invoice_id", id);
+    if (jmlBayar && jmlBayar > 0) {
+      return { error: "Invoice ini sudah ada pembayaran, jadi tidak dapat diubah." };
     }
 
     const { error } = await supabase.from("invoices").update(induk).eq("id", id);
