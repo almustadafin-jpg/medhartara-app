@@ -51,6 +51,7 @@ export interface Project {
   lokasi: string | null;
   nilai_kontrak: number | null;
   deskripsi: string | null;
+  arsip_pada: string | null;
   created_at: string;
   updated_at: string;
 }

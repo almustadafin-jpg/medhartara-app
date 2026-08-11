@@ -84,9 +84,29 @@ export async function hapusProyek(id: string) {
   if (error) return { error: pesanGagalHapus(error.code, error.message, "Proyek") };
   if (!count) {
     return {
-      error: pesanTakTerhapus("Proyek", "PM hanya dapat menghapus proyek yang ia pegang."),
+      error: pesanTakTerhapus(
+        "Proyek",
+        "Proyek hanya bisa dihapus bila belum punya BOQ, penawaran, invoice, atau transaksi. Arsipkan saja bila sudah ada.",
+      ),
     };
   }
+
+  revalidatePath("/proyek");
+  return { sukses: true };
+}
+
+/** Arsipkan / batalkan arsip proyek (sembunyikan dari daftar aktif tanpa hapus). */
+export async function arsipkanProyek(id: string, jadikan: boolean) {
+  const profil = await wajibLogin();
+  if (!boleh(profil.role, "kelolaProyek")) {
+    return { error: "Anda tidak memiliki izin untuk aksi ini." };
+  }
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("projects")
+    .update({ arsip_pada: jadikan ? new Date().toISOString() : null })
+    .eq("id", id);
+  if (error) return { error: pesanGagalHapus(error.code, error.message, "Proyek") };
 
   revalidatePath("/proyek");
   return { sukses: true };

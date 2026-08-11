@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, Archive, ArchiveRestore } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +11,7 @@ import { Tabel, Thead, Th, Td, Tr, KondisiKosong } from "@/components/ui/table";
 import { STATUS_PROYEK } from "@/lib/status";
 import { formatIDR, formatTanggalPendek } from "@/lib/format";
 import ProyekForm from "./proyek-form";
-import { hapusProyek } from "./actions";
+import { hapusProyek, arsipkanProyek } from "./actions";
 import { TombolHapus } from "@/components/ui/tombol-hapus";
 import type { Project, Customer, UsersProfile, UserRole, ProjectStatus } from "@/types";
 
@@ -35,18 +36,29 @@ export default function ProyekClient({
   const [terpilih, setTerpilih] = useState<Project | undefined>();
   const [cari, setCari] = useState("");
   const [filterStatus, setFilterStatus] = useState<ProjectStatus | typeof SEMUA>(SEMUA);
+  const [tampilArsip, setTampilArsip] = useState(false);
+  const router = useRouter();
+  const [pending, mulai] = useTransition();
 
   const namaPelanggan = (id: string) => pelanggan.find((p) => p.id === id)?.nama ?? "—";
   const namaPM = (id: string | null) =>
     id ? pengguna.find((u) => u.id === id)?.nama_lengkap ?? "—" : "Belum ditugaskan";
 
   const tersaring = data
+    .filter((p) => tampilArsip || !p.arsip_pada)
     .filter((p) => filterStatus === SEMUA || p.status === filterStatus)
     .filter((p) =>
       [p.nama, p.kode, namaPelanggan(p.customer_id)]
         .filter(Boolean)
         .some((v) => v!.toLowerCase().includes(cari.toLowerCase())),
     );
+
+  function ubahArsip(p: Project) {
+    mulai(async () => {
+      await arsipkanProyek(p.id, !p.arsip_pada);
+      router.refresh();
+    });
+  }
 
   /** PM hanya boleh menyunting proyek yang ia pegang — cerminan RLS. */
   const bisaSunting = (p: Project) =>
@@ -78,6 +90,15 @@ export default function ProyekClient({
             </option>
           ))}
         </select>
+        <label className="flex items-center gap-2 text-sm text-slate-600">
+          <input
+            type="checkbox"
+            checked={tampilArsip}
+            onChange={(e) => setTampilArsip(e.target.checked)}
+            className="h-4 w-4 rounded border-slate-300"
+          />
+          Tampilkan arsip
+        </label>
         {bisaKelola && (
           <Button className="ml-auto" onClick={() => buka()}>
             <Plus className="h-4 w-4" />
@@ -132,6 +153,11 @@ export default function ProyekClient({
                   <Badge warna={STATUS_PROYEK[p.status].warna}>
                     {STATUS_PROYEK[p.status].label}
                   </Badge>
+                  {p.arsip_pada && (
+                    <span className="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">
+                      Arsip
+                    </span>
+                  )}
                 </Td>
                 <Td>
                   {bisaSunting(p) && (
@@ -142,6 +168,18 @@ export default function ProyekClient({
                         title="Ubah"
                       >
                         <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => ubahArsip(p)}
+                        disabled={pending}
+                        className="rounded p-1.5 text-slate-500 transition hover:bg-slate-100 disabled:opacity-40"
+                        title={p.arsip_pada ? "Batalkan arsip" : "Arsipkan"}
+                      >
+                        {p.arsip_pada ? (
+                          <ArchiveRestore className="h-4 w-4" />
+                        ) : (
+                          <Archive className="h-4 w-4" />
+                        )}
                       </button>
                       <TombolHapus
                         nama={p.nama}
