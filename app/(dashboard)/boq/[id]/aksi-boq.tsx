@@ -2,13 +2,14 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ubahStatusBoq, tarikKePenawaran } from "../actions";
+import { ubahStatusBoq, tarikKePenawaran, tandaiFinalBoq } from "../actions";
 import { Button } from "@/components/ui/button";
 import type { BoqStatus } from "@/types";
 
 export default function AksiBoq({
   id,
   status,
+  sudahFinal,
   sudahDitarik,
   bisaKelola,
   bisaSetujui,
@@ -16,6 +17,7 @@ export default function AksiBoq({
 }: {
   id: string;
   status: BoqStatus;
+  sudahFinal: boolean;
   sudahDitarik: boolean;
   bisaKelola: boolean;
   bisaSetujui: boolean;
@@ -29,6 +31,15 @@ export default function AksiBoq({
     setError(undefined);
     mulai(async () => {
       const hasil = await ubahStatusBoq(id, baru);
+      if (hasil?.error) setError(hasil.error);
+      else router.refresh();
+    });
+  }
+
+  function ubahFinal(jadikan: boolean) {
+    setError(undefined);
+    mulai(async () => {
+      const hasil = await tandaiFinalBoq(id, jadikan);
       if (hasil?.error) setError(hasil.error);
       else router.refresh();
     });
@@ -85,6 +96,26 @@ export default function AksiBoq({
       <Button key="arsip" varian="halus" disabled={pending} onClick={() => jalankan("arsip")}>
         Arsipkan
       </Button>,
+    );
+  }
+
+  // BOQ Final: penanda angka disepakati klien (admin tetap bisa edit).
+  if (bisaKelola) {
+    tombol.push(
+      sudahFinal ? (
+        <Button key="unfinal" varian="sekunder" disabled={pending} onClick={() => ubahFinal(false)}>
+          Batalkan Final
+        </Button>
+      ) : (
+        <Button
+          key="final"
+          disabled={pending}
+          onClick={() => ubahFinal(true)}
+          className="bg-emerald-600 hover:bg-emerald-500"
+        >
+          Tandai BOQ Final
+        </Button>
+      ),
     );
   }
 

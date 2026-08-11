@@ -31,7 +31,7 @@ export default async function DetailPenawaranPage({
   if (!penawaran) notFound();
   const q = penawaran as Quotation;
 
-  const [{ data: items }, { data: pelanggan }, { data: proyek }, { data: perusahaan }, { data: penyetuju }] =
+  const [{ data: items }, { data: pelanggan }, { data: proyek }, { data: perusahaan }] =
     await Promise.all([
       supabase.from("quotation_items").select("*").eq("quotation_id", id).order("urutan"),
       supabase.from("customers").select("*").eq("id", q.customer_id).maybeSingle(),
@@ -39,9 +39,6 @@ export default async function DetailPenawaranPage({
         ? supabase.from("projects").select("*").eq("id", q.project_id).maybeSingle()
         : Promise.resolve({ data: null }),
       supabase.from("companies").select("*").eq("id", q.company_id).maybeSingle(),
-      q.disetujui_oleh
-        ? supabase.from("users_profile").select("*").eq("id", q.disetujui_oleh).maybeSingle()
-        : Promise.resolve({ data: null }),
     ]);
 
   const daftarItem = (items as QuotationItem[]) ?? [];
@@ -208,11 +205,13 @@ export default async function DetailPenawaranPage({
                 Pembayaran: {pt.bank_nama} {pt.bank_rekening} a.n. {pt.bank_atas_nama}
               </p>
             )}
-            {q.disetujui_pada && (
-              <p className="mt-1">
-                {q.status === "ditolak" ? "Ditolak" : "Disetujui"} oleh{" "}
-                {(penyetuju as UsersProfile | null)?.nama_lengkap ?? "—"} ·{" "}
-                {formatWaktu(q.disetujui_pada)}
+            {q.final_pada ? (
+              <p className="mt-1 font-medium text-emerald-700">
+                ✓ Final pada {formatWaktu(q.final_pada)}
+              </p>
+            ) : (
+              <p className="mt-1 text-slate-400">
+                Belum Final — tandai Final dulu agar bisa dikonversi ke invoice.
               </p>
             )}
           </div>
@@ -224,6 +223,8 @@ export default async function DetailPenawaranPage({
           <AksiPenawaran
             id={q.id}
             status={q.status}
+            sudahFinal={Boolean(q.final_pada)}
+            bisaKelola={boleh(profil.role, "kelolaPenawaran")}
             bisaKonversi={boleh(profil.role, "kelolaInvoice")}
           />
         </footer>

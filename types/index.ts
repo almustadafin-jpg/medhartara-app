@@ -82,6 +82,7 @@ export interface Quotation {
   total: number;
   disetujui_oleh: string | null;
   disetujui_pada: string | null;
+  final_pada: string | null;
   ttd_nama: string | null;
   ttd_jabatan: string | null;
   created_by: string | null;
@@ -199,6 +200,7 @@ export interface Boq {
   total_jual: number;
   disetujui_oleh: string | null;
   disetujui_pada: string | null;
+  final_pada: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

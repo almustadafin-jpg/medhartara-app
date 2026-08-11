@@ -161,6 +161,23 @@ export async function simpanPenawaran(_prev: FormState, fd: FormData): Promise<F
   redirect(`/penawaran/${quotationId}`);
 }
 
+/** Tandai / batalkan Penawaran Final (hanya yang Final bisa dikonversi ke invoice). */
+export async function tandaiFinalPenawaran(id: string, jadikan: boolean) {
+  const profil = await wajibLogin();
+  if (!boleh(profil.role, "kelolaPenawaran")) {
+    return { error: "Anda tidak memiliki izin untuk aksi ini." };
+  }
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("quotations")
+    .update({ final_pada: jadikan ? new Date().toISOString() : null })
+    .eq("id", id);
+  if (error) return { error: error.message.replace(/^.*?:\s*/, "") };
+
+  revalidatePath(`/penawaran/${id}`);
+  return { sukses: true };
+}
+
 /** Perubahan status: kirim, setujui, tolak, arsipkan. */
 export async function ubahStatusPenawaran(id: string, status: QuotationStatus) {
   const profil = await wajibLogin();

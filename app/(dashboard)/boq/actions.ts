@@ -127,6 +127,23 @@ export async function simpanBoq(_prev: FormState, fd: FormData): Promise<FormSta
   redirect(`/boq/${boqId}`);
 }
 
+/** Tandai / batalkan BOQ Final (penanda angka disepakati; admin tetap bisa edit). */
+export async function tandaiFinalBoq(id: string, jadikan: boolean) {
+  const profil = await wajibLogin();
+  if (!boleh(profil.role, "kelolaBOQ")) {
+    return { error: "Anda tidak memiliki izin untuk aksi ini." };
+  }
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("boq")
+    .update({ final_pada: jadikan ? new Date().toISOString() : null })
+    .eq("id", id);
+  if (error) return { error: pesanDB(error.message) };
+
+  revalidatePath(`/boq/${id}`);
+  return { sukses: true };
+}
+
 export async function ubahStatusBoq(id: string, status: BoqStatus) {
   const profil = await wajibLogin();
 

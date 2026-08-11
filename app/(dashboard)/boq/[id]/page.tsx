@@ -8,10 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { KartuMetrik } from "@/components/ui/kartu-metrik";
 import { Tabel, Thead, Th, Td, Tr } from "@/components/ui/table";
 import { STATUS_BOQ } from "@/lib/status";
-import { formatIDR, formatTanggal } from "@/lib/format";
+import { formatIDR, formatTanggal, formatWaktu } from "@/lib/format";
 import AksiBoq from "./aksi-boq";
 import HapusBoq from "./hapus-boq";
-import type { Boq, BoqItem, Customer, Project, Quotation, UsersProfile } from "@/types";
+import type { Boq, BoqItem, Customer, Project, Quotation } from "@/types";
 
 export default async function DetailBoqPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -22,7 +22,7 @@ export default async function DetailBoqPage({ params }: { params: Promise<{ id: 
   if (!boq) notFound();
   const b = boq as Boq;
 
-  const [{ data: items }, { data: pelanggan }, { data: proyek }, { data: penawaran }, { data: penyetuju }] =
+  const [{ data: items }, { data: pelanggan }, { data: proyek }, { data: penawaran }] =
     await Promise.all([
       supabase.from("boq_items").select("*").eq("boq_id", id).order("urutan"),
       b.customer_id
@@ -33,9 +33,6 @@ export default async function DetailBoqPage({ params }: { params: Promise<{ id: 
         : Promise.resolve({ data: null }),
       b.quotation_id
         ? supabase.from("quotations").select("*").eq("id", b.quotation_id).maybeSingle()
-        : Promise.resolve({ data: null }),
-      b.disetujui_oleh
-        ? supabase.from("users_profile").select("*").eq("id", b.disetujui_oleh).maybeSingle()
         : Promise.resolve({ data: null }),
     ]);
 
@@ -126,18 +123,15 @@ export default async function DetailBoqPage({ params }: { params: Promise<{ id: 
           {(proyek as Project | null)?.nama ?? "—"}
         </div>
         <div className="rounded-xl border border-slate-200 bg-white px-5 py-4 text-sm">
-          {b.disetujui_pada ? (
+          <span className="text-slate-500">Terakhir diperbarui: </span>
+          {formatWaktu(b.updated_at)}
+          {b.final_pada && (
             <>
-              <span className="text-slate-500">
-                {b.status === "ditolak" ? "Ditolak oleh: " : "Disetujui oleh: "}
-              </span>
-              {(penyetuju as UsersProfile | null)?.nama_lengkap ?? "—"}
               <br />
-              <span className="text-slate-500">Pada: </span>
-              {formatTanggal(b.disetujui_pada)}
+              <span className="font-medium text-emerald-700">
+                ✓ Final pada {formatTanggal(b.final_pada)}
+              </span>
             </>
-          ) : (
-            <span className="text-slate-400">Belum ada persetujuan.</span>
           )}
           {penawaran && (
             <>
@@ -236,6 +230,7 @@ export default async function DetailBoqPage({ params }: { params: Promise<{ id: 
         <AksiBoq
           id={b.id}
           status={b.status}
+          sudahFinal={Boolean(b.final_pada)}
           sudahDitarik={Boolean(b.quotation_id)}
           bisaKelola={boleh(profil.role, "kelolaBOQ")}
           bisaSetujui={boleh(profil.role, "setujuiBOQ")}
