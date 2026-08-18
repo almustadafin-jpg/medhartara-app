@@ -132,7 +132,8 @@ export interface DataBoqPDF {
   disetujui: { oleh: string; pada: string } | null;
 }
 
-export function BoqPDF({ data }: { data: DataBoqPDF }) {
+/** Halaman lampiran BOQ (tanpa pembungkus Document) — bisa digabung ke dokumen lain. */
+export function HalamanBoq({ data }: { data: DataBoqPDF }) {
   const internal = data.versi === "internal";
   const adaLogo = Boolean(data.perusahaan.logo_url);
   const adaHari = data.items.some((it) => Number(it.hari) !== 1);
@@ -152,7 +153,6 @@ export function BoqPDF({ data }: { data: DataBoqPDF }) {
   let no = 0;
 
   return (
-    <Document title={`BOQ ${data.nomor}`} author={data.perusahaan.nama}>
       <Page size="A4" orientation="landscape" style={s.halaman}>
         <View style={s.kepala}>
           <View style={{ maxWidth: 380 }}>
@@ -306,6 +306,13 @@ export function BoqPDF({ data }: { data: DataBoqPDF }) {
           <Text render={({ pageNumber, totalPages }) => `Halaman ${pageNumber} dari ${totalPages}`} />
         </View>
       </Page>
+  );
+}
+
+export function BoqPDF({ data }: { data: DataBoqPDF }) {
+  return (
+    <Document title={`BOQ ${data.nomor}`} author={data.perusahaan.nama}>
+      <HalamanBoq data={data} />
     </Document>
   );
 }

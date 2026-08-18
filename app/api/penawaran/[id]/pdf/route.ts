@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { createClient, getProfil } from "@/lib/supabase/server";
 import { boleh } from "@/lib/auth/permissions";
-import { STATUS_PENAWARAN } from "@/lib/status";
+import { STATUS_PENAWARAN, STATUS_BOQ } from "@/lib/status";
 import { DokumenPDF, type DataDokumenPDF } from "@/components/pdf/dokumen-pdf";
+import { PenawaranDenganBoqPDF } from "@/components/pdf/penawaran-boq-pdf";
+import { type DataBoqPDF, type BarisBoqPDF } from "@/components/pdf/boq-pdf";
 import { logoUntukPDF } from "@/lib/logo-pdf";
 import { rentangJadwal } from "@/lib/jadwal";
 
@@ -90,7 +92,61 @@ export async function GET(
     },
   };
 
-  const berkas = await renderToBuffer(DokumenPDF({ data }));
+  // Lampiran BOQ: hanya untuk penawaran yang dikonversi dari BOQ.
+  // BOQ sumber menyimpan quotation_id yang menunjuk ke penawaran ini.
+  const { data: boqSumber } = await supabase
+    .from("boq")
+    .select("*")
+    .eq("quotation_id", id)
+    .order("created_at")
+    .limit(1)
+    .maybeSingle();
+
+  let lampiranBoq: DataBoqPDF | null = null;
+  if (boqSumber) {
+    const { data: boqItems } = await supabase
+      .from("boq_items")
+      .select("*")
+      .eq("boq_id", boqSumber.id)
+      .order("urutan");
+
+    lampiranBoq = {
+      versi: "klien",
+      nomor: boqSumber.nomor,
+      judul: boqSumber.judul,
+      statusLabel: STATUS_BOQ[boqSumber.status as keyof typeof STATUS_BOQ].label,
+      tanggal: boqSumber.tanggal,
+      perusahaan: data.perusahaan,
+      pelanggan: pelanggan?.nama ?? null,
+      proyek: proyek?.nama ?? null,
+      lokasi: proyek?.lokasi ?? null,
+      jadwal: rentangJadwal(proyek?.tanggal_mulai, proyek?.tanggal_selesai),
+      items: (boqItems ?? []).map(
+        (it): BarisBoqPDF => ({
+          kategori: it.kategori,
+          nama: it.nama,
+          deskripsi: it.deskripsi,
+          kuantitas: Number(it.kuantitas),
+          satuan: it.satuan,
+          hari: Number(it.hari),
+          waktu: Number(it.waktu ?? 1),
+          harga_modal: Number(it.harga_modal),
+          harga_jual: Number(it.harga_jual),
+          keterangan: it.keterangan ?? null,
+          subtotal_modal: Number(it.subtotal_modal),
+          subtotal_jual: Number(it.subtotal_jual),
+        }),
+      ),
+      total_modal: Number(boqSumber.total_modal),
+      total_jual: Number(boqSumber.total_jual),
+      catatan: boqSumber.catatan,
+      disetujui: null,
+    };
+  }
+
+  const berkas = lampiranBoq
+    ? await renderToBuffer(PenawaranDenganBoqPDF({ dok: data, boq: lampiranBoq }))
+    : await renderToBuffer(DokumenPDF({ data }));
 
   return new NextResponse(new Uint8Array(berkas), {
     headers: {

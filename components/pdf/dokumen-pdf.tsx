@@ -190,7 +190,8 @@ export interface DataDokumenPDF {
   penandaTangan?: { nama: string | null; jabatan: string | null } | null;
 }
 
-export function DokumenPDF({ data }: { data: DataDokumenPDF }) {
+/** Halaman dokumen (tanpa pembungkus Document) — agar bisa digabung dengan lampiran. */
+export function HalamanDokumen({ data }: { data: DataDokumenPDF }) {
   const potongan = (data.subtotal * data.diskon_persen) / 100;
   const dasar = data.subtotal - potongan;
   const ppn = hitungPPN(dasar, data.pajak_persen);
@@ -204,10 +205,6 @@ export function DokumenPDF({ data }: { data: DataDokumenPDF }) {
     .join("  ·  ");
 
   return (
-    <Document
-      title={`${adalahInvoice ? "Invoice" : "Penawaran"} ${data.nomor}`}
-      author={data.perusahaan.nama}
-    >
       <Page size="A4" style={s.halaman}>
         <View style={s.kepala}>
           <View style={s.kolomPT}>
@@ -401,6 +398,17 @@ export function DokumenPDF({ data }: { data: DataDokumenPDF }) {
           />
         </View>
       </Page>
+  );
+}
+
+export function DokumenPDF({ data }: { data: DataDokumenPDF }) {
+  const adalahInvoice = data.jenis === "invoice";
+  return (
+    <Document
+      title={`${adalahInvoice ? "Invoice" : "Penawaran"} ${data.nomor}`}
+      author={data.perusahaan.nama}
+    >
+      <HalamanDokumen data={data} />
     </Document>
   );
 }
