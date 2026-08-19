@@ -40,7 +40,9 @@ const s = StyleSheet.create({
   },
   kolomPT: { maxWidth: 300 },
   namaPT: { fontSize: 13, fontFamily: "Helvetica-Bold", marginBottom: 5 },
-  redup: { color: warna.redup, lineHeight: 1.3 },
+  // fontSize WAJIB eksplisit: @react-pdf menghitung lineHeight terhadap
+  // fontSize milik Text itu sendiri; tanpa ini spasinya jadi terlalu lebar.
+  redup: { color: warna.redup, fontSize: 9, lineHeight: 1.15 },
 
   /**
    * Logo Medhartara: 571 x 480 px → rasio 1,19 : 1.
@@ -256,20 +258,17 @@ export function HalamanDokumen({ data }: { data: DataDokumenPDF }) {
           </View>
 
           <View style={{ width: 200, textAlign: "right" }}>
-            <Text style={s.redup}>Tanggal: {formatTanggal(data.tanggal)}</Text>
+            {/* Satu Text dengan baris \n: spasi antar baris rapat & konsisten.
+                Detail proyek hanya di penawaran, bukan invoice. */}
             <Text style={s.redup}>
-              {data.tanggalKeduaLabel}: {formatTanggal(data.tanggalKedua)}
+              {[
+                `Tanggal: ${formatTanggal(data.tanggal)}`,
+                `${data.tanggalKeduaLabel}: ${formatTanggal(data.tanggalKedua)}`,
+                ...(!adalahInvoice && data.proyek ? [`Proyek: ${data.proyek}`] : []),
+                ...(!adalahInvoice && data.jadwal ? [`Pelaksanaan: ${data.jadwal}`] : []),
+                ...(!adalahInvoice && data.lokasi ? [`Lokasi: ${data.lokasi}`] : []),
+              ].join("\n")}
             </Text>
-            {/* Detail proyek tidak dicetak di invoice; tetap tampil di penawaran. */}
-            {!adalahInvoice && data.proyek && (
-              <Text style={s.redup}>Proyek: {data.proyek}</Text>
-            )}
-            {!adalahInvoice && data.jadwal && (
-              <Text style={s.redup}>Pelaksanaan: {data.jadwal}</Text>
-            )}
-            {!adalahInvoice && data.lokasi && (
-              <Text style={s.redup}>Lokasi: {data.lokasi}</Text>
-            )}
           </View>
         </View>
 
