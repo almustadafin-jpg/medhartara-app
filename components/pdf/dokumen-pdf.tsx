@@ -1,9 +1,13 @@
 import {
-  Document, Page, Text, View, StyleSheet, Image,
+  Document, Page, Text, View, StyleSheet, Image, Font,
 } from "@react-pdf/renderer";
 import { formatIDR, formatTanggal } from "@/lib/format";
 import { terbilangRupiah } from "@/lib/terbilang";
 import { hitungPPN, labelPPN } from "@/lib/pajak";
+
+// Cegah pemenggalan kata di tengah (mis. "In-donesia"): kata dibiarkan utuh,
+// pindah baris hanya di antar-kata. Berlaku global untuk semua dokumen PDF.
+Font.registerHyphenationCallback((kata) => [kata]);
 
 /**
  * Template PDF bersama untuk Penawaran & Invoice.
@@ -36,7 +40,7 @@ const s = StyleSheet.create({
   },
   kolomPT: { maxWidth: 300 },
   namaPT: { fontSize: 13, fontFamily: "Helvetica-Bold", marginBottom: 5 },
-  redup: { color: warna.redup, lineHeight: 1.5 },
+  redup: { color: warna.redup, lineHeight: 1.3 },
 
   /**
    * Logo Medhartara: 571 x 480 px → rasio 1,19 : 1.
@@ -237,7 +241,7 @@ export function HalamanDokumen({ data }: { data: DataDokumenPDF }) {
             <Text style={s.labelKecil}>
               {adalahInvoice ? "DITAGIHKAN KEPADA" : "KEPADA"}
             </Text>
-            <Text style={{ fontFamily: "Helvetica-Bold", lineHeight: 1.35 }}>
+            <Text style={{ fontFamily: "Helvetica-Bold", lineHeight: 1.25, marginBottom: 3 }}>
               {data.pelanggan.nama}
             </Text>
             {data.pelanggan.narahubung && (
