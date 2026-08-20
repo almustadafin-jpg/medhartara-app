@@ -97,7 +97,7 @@ export function KuitansiPDF({ data }: { data: DataKuitansiPDF }) {
 
   return (
     <Document title={`Kuitansi ${data.nomor}`} author={data.perusahaan.nama}>
-      <Page size="A5" orientation="landscape" style={s.halaman}>
+      <Page size="A4" style={s.halaman}>
         <View style={s.bingkai}>
           <View style={s.kepala}>
             <View style={{ maxWidth: 260 }}>
