@@ -30,6 +30,8 @@ export async function simpanPerusahaan(
     bank_nama: String(fd.get('bank_nama') ?? ''),
     bank_rekening: String(fd.get('bank_rekening') ?? ''),
     bank_atas_nama: String(fd.get('bank_atas_nama') ?? ''),
+    ttd_nama: String(fd.get('ttd_nama') ?? ''),
+    ttd_jabatan: String(fd.get('ttd_jabatan') ?? ''),
   })
 
   if (!parsed.success) {

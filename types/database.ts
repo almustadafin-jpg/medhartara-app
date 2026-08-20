@@ -16,6 +16,8 @@ export interface Company {
   bank_nama: string | null;
   bank_rekening: string | null;
   bank_atas_nama: string | null;
+  ttd_nama: string | null;
+  ttd_jabatan: string | null;
 }
 
 export interface UsersProfile {

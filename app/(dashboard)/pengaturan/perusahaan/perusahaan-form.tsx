@@ -59,6 +59,22 @@ export default function PerusahaanForm({ data }: { data: Company }) {
         </div>
       </section>
 
+      <section className="rounded-xl border border-slate-200 bg-white p-6">
+        <h2 className="text-sm font-semibold text-slate-900">Penanda Tangan Dokumen</h2>
+        <p className="mb-4 mt-1 text-xs text-slate-500">
+          Nama &amp; jabatan yang tampil di blok tanda tangan penawaran dan invoice.
+          Dipakai otomatis bila dokumen tidak mengisi penanda tangan sendiri.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Nama Direktur / Penanda Tangan" name="ttd_nama" error={e.ttd_nama}>
+            <Input id="ttd_nama" name="ttd_nama" defaultValue={data.ttd_nama ?? ''} placeholder="mis. Budi Santoso" />
+          </Field>
+          <Field label="Jabatan" name="ttd_jabatan" error={e.ttd_jabatan}>
+            <Input id="ttd_jabatan" name="ttd_jabatan" defaultValue={data.ttd_jabatan ?? 'Direktur'} placeholder="Direktur" />
+          </Field>
+        </div>
+      </section>
+
       {state.error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>
       )}

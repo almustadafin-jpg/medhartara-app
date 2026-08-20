@@ -95,8 +95,8 @@ export async function GET(
     // Invoice hasil konversi penawaran tidak membawa penanda tangan; agar
     // blok tanda tangan tetap tercetak, jatuh ke nama perusahaan.
     penandaTangan: {
-      nama: inv.ttd_nama || perusahaan?.nama || "Medhartara Production",
-      jabatan: inv.ttd_jabatan || "Direktur",
+      nama: inv.ttd_nama || perusahaan?.ttd_nama || perusahaan?.nama || "Medhartara Production",
+      jabatan: inv.ttd_jabatan || perusahaan?.ttd_jabatan || "Direktur",
     },
   };
 

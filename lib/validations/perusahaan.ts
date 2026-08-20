@@ -15,6 +15,8 @@ export const skemaPerusahaan = z.object({
   bank_nama: teksOpsional,
   bank_rekening: teksOpsional,
   bank_atas_nama: teksOpsional,
+  ttd_nama: teksOpsional,
+  ttd_jabatan: teksOpsional,
 })
 
 export type InputPerusahaan = z.infer<typeof skemaPerusahaan>

@@ -87,8 +87,8 @@ export async function GET(
         ? { oleh: penyetuju.nama_lengkap, pada: q.disetujui_pada }
         : null,
     penandaTangan: {
-      nama: q.ttd_nama || perusahaan?.nama || "Medhartara Production",
-      jabatan: q.ttd_jabatan || "Direktur",
+      nama: q.ttd_nama || perusahaan?.ttd_nama || perusahaan?.nama || "Medhartara Production",
+      jabatan: q.ttd_jabatan || perusahaan?.ttd_jabatan || "Direktur",
     },
   };
 
