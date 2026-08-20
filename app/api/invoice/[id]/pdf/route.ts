@@ -96,7 +96,7 @@ export async function GET(
     // blok tanda tangan tetap tercetak, jatuh ke nama perusahaan.
     penandaTangan: {
       nama: inv.ttd_nama || perusahaan?.nama || "Medhartara Production",
-      jabatan: inv.ttd_jabatan,
+      jabatan: inv.ttd_jabatan || "Direktur",
     },
   };
 
