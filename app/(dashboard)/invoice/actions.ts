@@ -199,13 +199,10 @@ export async function hapusPembayaran(id: string) {
     .eq("id", id)
     .maybeSingle();
 
-  const { error, count } = await supabase
-    .from("payments")
-    .delete({ count: "exact" })
-    .eq("id", id);
+  // Lewat RPC agar cascade (kuitansi + transaksi) diizinkan lewat penanda sesi.
+  const { error } = await supabase.rpc("batalkan_pembayaran", { p_payment: id });
 
-  if (error) return { error: pesanGagalHapus(error.code, error.message, "Pembayaran") };
-  if (!count) return { error: "Pembayaran tidak dapat dibatalkan." };
+  if (error) return { error: error.message.replace(/^.*?:\s*/, "") };
 
   if (bayar?.invoice_id) revalidatePath(`/invoice/${bayar.invoice_id}`);
   revalidatePath("/invoice");
