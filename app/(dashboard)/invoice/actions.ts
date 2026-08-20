@@ -181,6 +181,38 @@ export async function catatPembayaran(_prev: FormState, fd: FormData): Promise<F
   return { sukses: true };
 }
 
+/**
+ * Batalkan (hapus) satu pembayaran, mis. karena kendala/gagal.
+ * Kuitansi terkait ikut terhapus (cascade) dan status invoice dihitung
+ * ulang otomatis (mis. lunas → sebagian_dibayar / terkirim).
+ */
+export async function hapusPembayaran(id: string) {
+  const profil = await wajibLogin();
+  if (!boleh(profil.role, "catatPembayaran")) {
+    return { error: "Anda tidak memiliki izin membatalkan pembayaran." };
+  }
+
+  const supabase = await createClient();
+  const { data: bayar } = await supabase
+    .from("payments")
+    .select("invoice_id")
+    .eq("id", id)
+    .maybeSingle();
+
+  const { error, count } = await supabase
+    .from("payments")
+    .delete({ count: "exact" })
+    .eq("id", id);
+
+  if (error) return { error: pesanGagalHapus(error.code, error.message, "Pembayaran") };
+  if (!count) return { error: "Pembayaran tidak dapat dibatalkan." };
+
+  if (bayar?.invoice_id) revalidatePath(`/invoice/${bayar.invoice_id}`);
+  revalidatePath("/invoice");
+  revalidatePath("/kuitansi");
+  return { sukses: true };
+}
+
 export async function hapusInvoice(id: string) {
   const profil = await wajibLogin();
   if (!boleh(profil.role, "kelolaInvoice")) {

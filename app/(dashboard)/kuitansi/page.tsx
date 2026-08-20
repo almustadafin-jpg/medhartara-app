@@ -5,12 +5,14 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Tabel, Thead, Th, Td, Tr, KondisiKosong } from "@/components/ui/table";
 import { formatIDR, formatTanggalPendek } from "@/lib/format";
 import { LABEL_METODE } from "@/lib/status";
+import UbahKuitansi from "./ubah-kuitansi";
 import type { Kuitansi, Payment, InvoiceRingkas, Customer, TxnMethod } from "@/types";
 
 export const metadata = { title: "Kuitansi — Medhartara Production" };
 
 export default async function KuitansiPage() {
-  await wajibIzin("lihatKuitansi");
+  const profil = await wajibIzin("lihatKuitansi");
+  const bisaUbah = profil.role === "admin_finance";
   const supabase = await createClient();
 
   const [{ data: kuitansi }, { data: bayar }, { data: invoice }, { data: pelanggan }] =
@@ -90,14 +92,17 @@ export default async function KuitansiPage() {
                     {formatIDR(p?.jumlah ?? 0)}
                   </Td>
                   <Td>
-                    <a
-                      href={`/api/kuitansi/${k.id}/pdf`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                    >
-                      ⬇ PDF
-                    </a>
+                    <div className="flex items-center gap-1.5">
+                      {bisaUbah && <UbahKuitansi kuitansi={k} />}
+                      <a
+                        href={`/api/kuitansi/${k.id}/pdf`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                      >
+                        ⬇ PDF
+                      </a>
+                    </div>
                   </Td>
                 </Tr>
               );

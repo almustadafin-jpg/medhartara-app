@@ -10,6 +10,7 @@ import { formatIDR, formatTanggal } from "@/lib/format";
 import { hitungPPN, labelPPN } from "@/lib/pajak";
 import PanelInvoice from "./panel-invoice";
 import HapusInvoice from "./hapus-invoice";
+import BatalkanPembayaran from "./batalkan-pembayaran";
 import type {
   InvoiceRingkas, InvoiceItem, Payment, Customer, Project, Company, Quotation,
 } from "@/types";
@@ -230,6 +231,7 @@ export default async function DetailInvoicePage({
                   <Th>Catatan</Th>
                   <Th className="text-right">Jumlah</Th>
                   <Th className="w-24">Kuitansi</Th>
+                  {bisaKelola && <Th className="w-24" />}
                 </Tr>
               </Thead>
               <tbody>
@@ -254,6 +256,11 @@ export default async function DetailInvoicePage({
                         <span className="text-xs text-slate-400">—</span>
                       )}
                     </Td>
+                    {bisaKelola && (
+                      <Td>
+                        <BatalkanPembayaran id={p.id} />
+                      </Td>
+                    )}
                   </Tr>
                 ))}
               </tbody>
